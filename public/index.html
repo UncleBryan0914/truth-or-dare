@@ -66,6 +66,175 @@
 
     .btn-new:hover { filter: brightness(1.08); }
 
+    .btn-temp-manage {
+      background: var(--panel);
+      color: var(--text);
+      border: 1px solid rgba(148, 163, 184, 0.35);
+      font-weight: 600;
+    }
+
+    .btn-temp-manage:hover { filter: brightness(1.08); }
+
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 210;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: clamp(1rem, 4vw, 1.5rem);
+      background: rgba(15, 23, 42, 0.94);
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      transition: opacity 0.18s ease-out, visibility 0.18s ease-out;
+    }
+
+    .modal-overlay.is-open {
+      opacity: 1;
+      visibility: visible;
+      pointer-events: auto;
+    }
+
+    .modal-overlay.hidden { display: none; }
+
+    .modal-sheet {
+      width: min(92vw, 400px);
+      background: linear-gradient(160deg, #1e293b 0%, #0f172a 100%);
+      border-radius: 1rem;
+      padding: 1.25rem 1.25rem 1rem;
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      box-shadow: 0 24px 56px rgba(0, 0, 0, 0.5);
+      transform: translateY(12px) scale(0.97);
+      opacity: 0;
+      transition: transform 0.2s ease-out, opacity 0.2s ease-out;
+    }
+
+    .modal-overlay.is-open .modal-sheet {
+      transform: translateY(0) scale(1);
+      opacity: 1;
+    }
+
+    .modal-sheet--editor {
+      width: min(94vw, 520px);
+      max-height: min(85vh, 640px);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .modal-sheet h2 {
+      margin: 0 0 1rem;
+      font-size: clamp(1.05rem, 3.5vw, 1.25rem);
+      text-align: center;
+      font-weight: 700;
+    }
+
+    .modal-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 0.65rem;
+    }
+
+    .modal-actions button {
+      font: inherit;
+      border: none;
+      border-radius: 10px;
+      padding: 0.75rem 1rem;
+      cursor: pointer;
+      font-weight: 600;
+    }
+
+    .modal-pick-truth { background: var(--truth); color: #fff; }
+    .modal-pick-dare { background: var(--dare); color: #fff; }
+    .modal-btn-muted {
+      background: transparent;
+      color: var(--muted);
+      border: 1px solid rgba(148, 163, 184, 0.3);
+      font-weight: 500;
+    }
+
+    .temp-editor-body {
+      flex: 1;
+      overflow-y: auto;
+      margin-bottom: 0.75rem;
+      -webkit-overflow-scrolling: touch;
+    }
+
+  #tempEditorRows {
+      display: flex;
+      flex-direction: column;
+      gap: 0.55rem;
+    }
+
+    .temp-editor-row {
+      display: flex;
+      gap: 0.45rem;
+      align-items: center;
+    }
+
+    .temp-row-input {
+      flex: 1;
+      font: inherit;
+      font-size: 1rem;
+      padding: 0.6rem 0.75rem;
+      border-radius: 8px;
+      border: 1px solid rgba(148, 163, 184, 0.35);
+      background: rgba(15, 23, 42, 0.6);
+      color: var(--text);
+    }
+
+    .temp-row-input:focus {
+      outline: 2px solid rgba(148, 163, 184, 0.5);
+      outline-offset: 1px;
+    }
+
+    .temp-row-remove {
+      flex-shrink: 0;
+      width: 2rem;
+      height: 2rem;
+      border: none;
+      border-radius: 8px;
+      background: rgba(127, 29, 29, 0.35);
+      color: #fca5a5;
+      font-size: 1.25rem;
+      line-height: 1;
+      cursor: pointer;
+      padding: 0;
+    }
+
+    .temp-row-remove:hover { background: rgba(127, 29, 29, 0.55); }
+
+    .btn-add-row {
+      width: 100%;
+      font: inherit;
+      font-size: 1.1rem;
+      font-weight: 700;
+      padding: 0.5rem;
+      margin-bottom: 0.75rem;
+      border-radius: 8px;
+      border: 1px dashed rgba(148, 163, 184, 0.45);
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+    }
+
+    .btn-add-row:hover { color: var(--text); border-color: var(--muted); }
+
+    .btn-temp-done {
+      width: 100%;
+      font: inherit;
+      font-weight: 700;
+      padding: 0.75rem;
+      border: none;
+      border-radius: 10px;
+      background: #f59e0b;
+      color: #1c1917;
+      cursor: pointer;
+    }
+
+    .btn-temp-done:hover { filter: brightness(1.08); }
+
+
     .arena {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -369,6 +538,7 @@
 
   <div class="toolbar">
     <button type="button" class="btn-new" id="btnNewGame">開啟新局</button>
+    <button type="button" class="btn-temp-manage" id="btnManageTemp">管理臨時新增題目</button>
   </div>
 
   <div id="errorBanner" class="error-banner" role="alert"></div>
@@ -399,6 +569,29 @@
     </section>
   </main>
 
+
+  <div class="modal-overlay hidden" id="tempMenuOverlay" role="dialog" aria-modal="true" aria-hidden="true" hidden>
+    <div class="modal-sheet" role="document">
+      <h2>臨時新增題目</h2>
+      <div class="modal-actions">
+        <button type="button" class="modal-pick-truth" data-pick="truth">新增真心話</button>
+        <button type="button" class="modal-pick-dare" data-pick="dare">新增大冒險</button>
+        <button type="button" class="modal-btn-muted" id="tempMenuCancel">取消</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay hidden" id="tempEditorOverlay" role="dialog" aria-modal="true" aria-hidden="true" hidden>
+    <div class="modal-sheet modal-sheet--editor" role="document">
+      <h2 id="tempEditorTitle">新增的真心話題目</h2>
+      <div class="temp-editor-body">
+        <div id="tempEditorRows"></div>
+      </div>
+      <button type="button" class="btn-add-row" id="btnAddTempRow">+</button>
+      <button type="button" class="btn-temp-done" id="btnTempDone">完成編輯</button>
+    </div>
+  </div>
+
   <div class="reveal-overlay hidden" id="revealOverlay" role="dialog" aria-modal="true" aria-hidden="true" hidden>
     <div class="reveal-overlay__panel" id="resultPanel" aria-live="polite"></div>
     <p class="reveal-overlay__hint">點一下任意處關閉</p>
@@ -410,6 +603,7 @@
   </section>
 
   <script src="./config.js"></script>
+  <script src="./temp-cards.js"></script>
   <script src="./app.js"></script>
 </body>
 </html>

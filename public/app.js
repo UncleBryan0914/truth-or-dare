@@ -7,6 +7,8 @@
 
 const STORAGE_KEY = 'truth_or_dare_session_v1';
 
+const TEMP_STORAGE_KEY = 'truth_or_dare_temp_cards_v1';
+
 const DEMO_DECK = {
   truth: [
     { id: 't1', text: '說出一個你從沒告訴過在場任何人的秘密。' },
@@ -52,6 +54,8 @@ const els = {
 };
 
 /** @type {DeckCatalog} */
+let baseCatalog = { truth: [], dare: [] };
+/** @type {DeckCatalog} */
 let catalog = { truth: [], dare: [] };
 /** @type {string} */
 let catalogVersion = '';
@@ -91,9 +95,11 @@ function createNewSession() {
 function getOrInitSession() {
   let session = loadSession();
   const versionChanged = session && session.catalogVersion !== catalogVersion;
-  if (!session || versionChanged) {
+  if (!session) {
     session = createNewSession();
     saveSession(session);
+  } else if (versionChanged) {
+    applyCatalogToSession(session);
   }
   return session;
 }
@@ -120,6 +126,54 @@ function shuffleIds(cards) {
   }
   return ids;
 }
+
+
+function buildTempCards(type, texts) {
+  return texts.map((text, index) => ({
+    id: `temp-${type}-${index}-${text.length}-${hashText(text)}`,
+    text,
+  }));
+}
+
+function hashText(text) {
+  let h = 0;
+  for (let i = 0; i < text.length; i++) h = (h * 31 + text.charCodeAt(i)) | 0;
+  return Math.abs(h).toString(36);
+}
+
+function mergeCatalogWithTemp(base, tempTexts) {
+  return {
+    truth: [...base.truth, ...buildTempCards('truth', tempTexts.truth)],
+    dare: [...base.dare, ...buildTempCards('dare', tempTexts.dare)],
+  };
+}
+
+function applyCatalogToSession(session) {
+  const drawn = new Set(session.history.map((h) => h.id));
+  for (const type of ['truth', 'dare']) {
+    const poolKey = type === 'truth' ? 'remainingTruthIds' : 'remainingDareIds';
+    const validIds = (type === 'truth' ? catalog.truth : catalog.dare).map((c) => c.id);
+    const validSet = new Set(validIds);
+    let remaining = session[poolKey].filter((id) => validSet.has(id));
+    for (const id of validIds) {
+      if (!drawn.has(id) && !remaining.includes(id)) remaining.push(id);
+    }
+    session[poolKey] = remaining;
+  }
+  session.catalogVersion = catalogVersion;
+  saveSession(session);
+  return session;
+}
+
+window.applyTempCardsToGame = function applyTempCardsToGame() {
+  const tempTexts = window.TempCards?.getTextsForApply?.() ?? { truth: [], dare: [] };
+  catalog = mergeCatalogWithTemp(baseCatalog, tempTexts);
+  catalogVersion = catalogFingerprint(catalog);
+  const session = loadSession() || createNewSession();
+  applyCatalogToSession(session);
+  updateUI(session);
+};
+
 
 /** @param {'truth'|'dare'} type */
 function findCard(type, id) {
@@ -280,6 +334,8 @@ async function fetchFromCustomApi(cfg) {
 }
 
 function bindEvents() {
+  window.TempCards?.init?.();
+
   if (els.revealOverlay) {
     els.revealOverlay.addEventListener('click', hideReveal);
   }
@@ -312,7 +368,9 @@ async function init() {
   hideError();
 
   try {
-    catalog = await fetchCatalog();
+    baseCatalog = await fetchCatalog();
+    const tempTexts = window.TempCards?.getTextsForApply?.() ?? { truth: [], dare: [] };
+    catalog = mergeCatalogWithTemp(baseCatalog, tempTexts);
     catalogVersion = catalogFingerprint(catalog);
 
     if (!catalog.truth.length && !catalog.dare.length) {
@@ -324,7 +382,9 @@ async function init() {
   } catch (err) {
     console.error(err);
     showError(err.message || '載入失敗');
-    catalog = { ...DEMO_DECK };
+    baseCatalog = { ...DEMO_DECK };
+    const tempTexts = window.TempCards?.getTextsForApply?.() ?? { truth: [], dare: [] };
+    catalog = mergeCatalogWithTemp(baseCatalog, tempTexts);
     catalogVersion = catalogFingerprint(catalog);
     updateUI(getOrInitSession());
   } finally {
