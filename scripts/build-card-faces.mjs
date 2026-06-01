@@ -66,8 +66,9 @@ async function backgroundRgb(pipeline) {
  * Keep only white silhouettes on a flat card color (removes black bars, corner chips, halos).
  * @param {import('sharp').Sharp} pipeline
  * @param {{ r: number, g: number, b: number }} bg
+ * @param {boolean} stripEdge
  */
-async function isolateWhiteSilhouettes(pipeline, bg) {
+async function isolateWhiteSilhouettes(pipeline, bg, stripEdge = false) {
   const { data, info } = await pipeline
     .rotate()
     .ensureAlpha()
@@ -168,23 +169,25 @@ async function isolateWhiteSilhouettes(pipeline, bg) {
     return sharp(out, { raw: { width: w, height: h, channels: 3 } });
   }
 
-  const edge = Math.max(3, Math.floor(Math.min(cropW, cropH) * 0.07));
-  for (let y = minY; y <= maxY; y++) {
-    for (let x = minX; x <= maxX; x++) {
-      const lx = x - minX;
-      const ly = y - minY;
-      const onEdge =
-        lx < edge ||
-        lx >= cropW - edge ||
-        ly < edge ||
-        ly >= cropH - edge;
-      if (!onEdge) continue;
-      const i = y * w + x;
-      mask[i] = 0;
-      const o = i * 3;
-      out[o] = br;
-      out[o + 1] = bgg;
-      out[o + 2] = bb;
+  if (stripEdge) {
+    const edge = Math.max(3, Math.floor(Math.min(cropW, cropH) * 0.07));
+    for (let y = minY; y <= maxY; y++) {
+      for (let x = minX; x <= maxX; x++) {
+        const lx = x - minX;
+        const ly = y - minY;
+        const onEdge =
+          lx < edge ||
+          lx >= cropW - edge ||
+          ly < edge ||
+          ly >= cropH - edge;
+        if (!onEdge) continue;
+        const i = y * w + x;
+        mask[i] = 0;
+        const o = i * 3;
+        out[o] = br;
+        out[o + 1] = bgg;
+        out[o + 2] = bb;
+      }
     }
   }
 
@@ -232,15 +235,16 @@ function artPlacement(fw, fh) {
  * @param {string} input
  * @param {string} output
  * @param {string} label
- * @param {{ squeeze?: number }} [opts]
+ * @param {{ squeeze?: number, stripEdge?: boolean }} [opts]
  */
 async function buildCard(input, output, label, opts = {}) {
   const squeeze = opts.squeeze ?? 1;
+  const stripEdge = opts.stripEdge ?? false;
   const source = sharp(input);
   const bg = await backgroundRgb(source);
   const background = { r: bg.r, g: bg.g, b: bg.b, alpha: 1 };
 
-  const isolated = await isolateWhiteSilhouettes(source, bg);
+  const isolated = await isolateWhiteSilhouettes(source, bg, stripEdge);
   const isoMeta = await isolated.metadata();
   if (!isoMeta.width || !isoMeta.height) {
     throw new Error(`Empty silhouette for ${input}`);
