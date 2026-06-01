@@ -129,25 +129,29 @@
     .deck:nth-child(3) { transform: translate(8px, 8px); z-index: 3; opacity: 0.84; }
 
     .deck.face.truth {
-      background-color: var(--truth-dark);
+      background-color: var(--truth);
       background-image: image-set(
         url('./images/cards/truth-card-preview@1x.png') 1x,
         url('./images/cards/truth-card-preview.png') 2x
       );
       background-size: cover;
       background-position: center;
+      background-repeat: no-repeat;
       color: transparent;
+      font-size: 0;
     }
 
     .deck.face.dare {
-      background-color: var(--dare-dark);
+      background-color: var(--dare);
       background-image: image-set(
         url('./images/cards/dare-card-draft@1x.png') 1x,
         url('./images/cards/dare-card-draft.png') 2x
       );
       background-size: cover;
       background-position: center;
+      background-repeat: no-repeat;
       color: transparent;
+      font-size: 0;
     }
 
     .deck:not(.disabled):hover {
