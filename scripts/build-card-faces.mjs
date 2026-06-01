@@ -19,11 +19,11 @@ const H = CARD_HEIGHT_1X * 2;
 const LABEL_H = Math.round(H * 0.25);
 const ART_H = H - LABEL_H;
 
-const ART_PAD_X = Math.round(W * 0.05);
-const ART_FIT_W = W - ART_PAD_X * 2;
-const ART_FIT_H = Math.round(ART_H * 0.82);
-/** Same top inset for TRUTH & DARE silhouettes */
-const ART_TOP = Math.round(ART_H * 0.08);
+/** Tiny inset from card edges inside the art band */
+const ART_MARGIN = 0.025;
+const ART_FIT_W = Math.round(W * (1 - ART_MARGIN * 2));
+const ART_FIT_H = Math.round(ART_H * (1 - ART_MARGIN * 2));
+const ART_TOP = Math.round(ART_H * ART_MARGIN);
 
 /** @param {string} label */
 function labelSvg(label) {
@@ -67,8 +67,9 @@ async function backgroundRgb(pipeline) {
  * @param {import('sharp').Sharp} pipeline
  * @param {{ r: number, g: number, b: number }} bg
  * @param {boolean} stripEdge
+ * @param {boolean} restoreHeads
  */
-async function isolateWhiteSilhouettes(pipeline, bg, stripEdge = false) {
+async function isolateWhiteSilhouettes(pipeline, bg, stripEdge = false, restoreHeads = false) {
   const { data, info } = await pipeline
     .rotate()
     .ensureAlpha()
@@ -119,7 +120,10 @@ async function isolateWhiteSilhouettes(pipeline, bg, stripEdge = false) {
     }
   }
 
-  for (let pass = 0; pass < 3; pass++) {
+  const prunePasses = restoreHeads ? 2 : 3;
+  const pruneMinNeighbors = restoreHeads ? 3 : 4;
+
+  for (let pass = 0; pass < prunePasses; pass++) {
     for (let y = 1; y < h - 1; y++) {
       for (let x = 1; x < w - 1; x++) {
         const i = y * w + x;
@@ -131,7 +135,7 @@ async function isolateWhiteSilhouettes(pipeline, bg, stripEdge = false) {
             if (mask[(y + dy) * w + (x + dx)]) n++;
           }
         }
-        if (n < 4) {
+        if (n < pruneMinNeighbors) {
           mask[i] = 0;
           const o = i * 3;
           out[o] = br;
@@ -169,17 +173,37 @@ async function isolateWhiteSilhouettes(pipeline, bg, stripEdge = false) {
     return sharp(out, { raw: { width: w, height: h, channels: 3 } });
   }
 
+  if (restoreHeads) {
+    fillHeadArcs(mask, out, w, minX, minY, maxX, maxY, [
+      [0, 0.52],
+      [0.48, 1],
+    ]);
+    minY = h;
+    maxY = 0;
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        if (!mask[y * w + x]) continue;
+        if (x < minX) minX = x;
+        if (x > maxX) maxX = x;
+        if (y < minY) minY = y;
+        if (y > maxY) maxY = y;
+      }
+    }
+  }
+
   if (stripEdge) {
-    const edge = Math.max(3, Math.floor(Math.min(cropW, cropH) * 0.07));
+    const cropW2 = maxX - minX + 1;
+    const cropH2 = maxY - minY + 1;
+    const edge = Math.max(3, Math.floor(Math.min(cropW2, cropH2) * 0.07));
     for (let y = minY; y <= maxY; y++) {
       for (let x = minX; x <= maxX; x++) {
         const lx = x - minX;
         const ly = y - minY;
         const onEdge =
           lx < edge ||
-          lx >= cropW - edge ||
+          lx >= cropW2 - edge ||
           ly < edge ||
-          ly >= cropH - edge;
+          ly >= cropH2 - edge;
         if (!onEdge) continue;
         const i = y * w + x;
         mask[i] = 0;
@@ -191,19 +215,91 @@ async function isolateWhiteSilhouettes(pipeline, bg, stripEdge = false) {
     }
   }
 
+  const finalW = maxX - minX + 1;
+  const finalH = maxY - minY + 1;
+
   return sharp(out, { raw: { width: w, height: h, channels: 3 } }).extract({
     left: minX,
     top: minY,
-    width: cropW,
-    height: cropH,
+    width: finalW,
+    height: finalH,
   });
+}
+
+/**
+ * Round off flat-topped heads clipped in source art.
+ * @param {Uint8Array} mask
+ * @param {Buffer} out
+ */
+function paintHeadArc(mask, out, w, minX, minY, cx, flatY, runW) {
+  const rx = runW * 0.58;
+  const ry = Math.max(runW * 0.65, 12);
+  const y0 = Math.max(0, Math.floor(flatY - ry));
+  const y1 = flatY;
+  const x0 = Math.max(0, Math.ceil(cx - rx));
+  const x1 = Math.min(w - 1, Math.floor(cx + rx));
+
+  for (let y = y0; y <= y1; y++) {
+    for (let x = x0; x <= x1; x++) {
+      const dy = flatY - y;
+      const dx = x - cx;
+      if ((dx * dx) / (rx * rx) + (dy * dy) / (ry * ry) > 1) continue;
+      const i = y * w + x;
+      mask[i] = 1;
+      const o = i * 3;
+      out[o] = 255;
+      out[o + 1] = 255;
+      out[o + 2] = 255;
+    }
+  }
+}
+
+/** @param {[number, number][]} zones [startFrac, endFrac] pairs across crop width */
+function fillHeadArcs(mask, out, w, minX, minY, maxX, maxY, zones) {
+  const cropW = maxX - minX + 1;
+  const cropH = maxY - minY + 1;
+
+  for (const [f0, f1] of zones) {
+    const lx0 = Math.floor(cropW * f0);
+    const lx1 = Math.min(cropW, Math.ceil(cropW * f1));
+    const zoneW = lx1 - lx0;
+    let topLy = cropH;
+    const minSpan = Math.max(10, Math.floor(zoneW * 0.18));
+
+    for (let ly = 0; ly < cropH; ly++) {
+      let count = 0;
+      for (let lx = lx0; lx < lx1; lx++) {
+        if (mask[(minY + ly) * w + (minX + lx)]) count++;
+      }
+      if (count >= minSpan) {
+        topLy = ly;
+        break;
+      }
+    }
+    if (topLy >= cropH) continue;
+
+    let spanStart = lx1;
+    let spanEnd = lx0;
+    for (let lx = lx0; lx < lx1; lx++) {
+      if (!mask[(minY + topLy) * w + (minX + lx)]) continue;
+      spanStart = Math.min(spanStart, lx);
+      spanEnd = Math.max(spanEnd, lx);
+    }
+
+    const runW = spanEnd - spanStart + 1;
+    if (runW < 12) continue;
+
+    const cx = minX + spanStart + runW / 2;
+    paintHeadArc(mask, out, w, minX, minY, cx, minY + topLy, runW);
+  }
 }
 
 /**
  * @param {import('sharp').Sharp} art
  * @param {number} squeeze horizontal scale (<1 = tighter grouping)
+ * @param {boolean} fillWidth prefer spanning card width (for wide DARE art)
  */
-async function fitArt(art, squeeze) {
+async function fitArt(art, squeeze, fillWidth = false) {
   let pipe = art;
   const before = await pipe.metadata();
   if (!before.width || !before.height) {
@@ -216,13 +312,25 @@ async function fitArt(art, squeeze) {
     pipe = pipe.resize(sw, sh, { fit: 'fill' });
   }
 
+  if (fillWidth) {
+    let buf = await pipe
+      .resize(ART_FIT_W, null, { withoutEnlargement: false })
+      .png()
+      .toBuffer();
+    const sized = await sharp(buf).metadata();
+    if ((sized.height ?? 0) > ART_FIT_H) {
+      buf = await sharp(buf).resize(null, ART_FIT_H).png().toBuffer();
+    }
+    return buf;
+  }
+
   return pipe
     .resize(ART_FIT_W, ART_FIT_H, { fit: 'inside', withoutEnlargement: false })
     .png()
     .toBuffer();
 }
 
-/** Align silhouette bottoms so DARE sits at the same band as TRUTH. */
+/** Align silhouette bottoms; center horizontally with minimal side margin. */
 function artPlacement(fw, fh) {
   const bottom = ART_TOP + ART_FIT_H;
   return {
@@ -240,16 +348,17 @@ function artPlacement(fw, fh) {
 async function buildCard(input, output, label, opts = {}) {
   const squeeze = opts.squeeze ?? 1;
   const stripEdge = opts.stripEdge ?? false;
+  const restoreHeads = opts.restoreHeads ?? false;
   const source = sharp(input);
   const bg = await backgroundRgb(source);
   const background = { r: bg.r, g: bg.g, b: bg.b, alpha: 1 };
 
-  const isolated = await isolateWhiteSilhouettes(source, bg, stripEdge);
+  const isolated = await isolateWhiteSilhouettes(source, bg, stripEdge, restoreHeads);
   const isoMeta = await isolated.metadata();
   if (!isoMeta.width || !isoMeta.height) {
     throw new Error(`Empty silhouette for ${input}`);
   }
-  const fitted = await fitArt(isolated, squeeze);
+  const fitted = await fitArt(isolated, squeeze, opts.fillWidth ?? false);
   const { width: fw = 0, height: fh = 0 } = await sharp(fitted).metadata();
   const { left, top } = artPlacement(fw, fh);
   const labelBand = labelSvg(label);
@@ -285,8 +394,18 @@ async function resolveSource(baseName) {
 }
 
 const jobs = [
-  ['truth-card-preview', 'truth-card-preview.png', 'TRUTH', { squeeze: 1 }],
-  ['dare-card-draft', 'dare-card-draft.png', 'DARE', { squeeze: 0.44 }],
+  [
+    'truth-card-preview',
+    'truth-card-preview.png',
+    'TRUTH',
+    { squeeze: 1, stripEdge: false, restoreHeads: true },
+  ],
+  [
+    'dare-card-draft',
+    'dare-card-draft.png',
+    'DARE',
+    { squeeze: 0.26, stripEdge: true, restoreHeads: false, fillWidth: true },
+  ],
 ];
 
 await mkdir(OUT, { recursive: true });
