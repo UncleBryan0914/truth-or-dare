@@ -41,9 +41,9 @@ const els = {
   error: $('#errorBanner'),
   countTruth: $('#countTruth'),
   countDare: $('#countDare'),
+  pileRemainingTruth: $('#pileRemainingTruth'),
+  pileRemainingDare: $('#pileRemainingDare'),
   btnNew: $('#btnNewGame'),
-  btnTruth: $('#btnDrawTruth'),
-  btnDare: $('#btnDrawDare'),
   truthDeck: $('#truthDeckVisual'),
   dareDeck: $('#dareDeckVisual'),
   result: $('#resultPanel'),
@@ -133,8 +133,8 @@ function updateUI(session) {
   const truthEmpty = session.remainingTruthIds.length === 0;
   const dareEmpty = session.remainingDareIds.length === 0;
 
-  els.btnTruth.disabled = truthEmpty;
-  els.btnDare.disabled = dareEmpty;
+  if (els.pileRemainingTruth) els.pileRemainingTruth.classList.toggle('empty', truthEmpty);
+  if (els.pileRemainingDare) els.pileRemainingDare.classList.toggle('empty', dareEmpty);
 
   els.truthDeck.querySelectorAll('.deck').forEach((el) => {
     el.classList.toggle('disabled', truthEmpty);
