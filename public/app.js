@@ -46,6 +46,7 @@ const els = {
   btnNew: $('#btnNewGame'),
   truthDeck: $('#truthDeckVisual'),
   dareDeck: $('#dareDeckVisual'),
+  revealOverlay: $('#revealOverlay'),
   result: $('#resultPanel'),
   history: $('#historyList'),
 };
@@ -161,15 +162,26 @@ function escapeHtml(s) {
   return d.innerHTML;
 }
 
+function hideReveal() {
+  if (!els.revealOverlay) return;
+  els.revealOverlay.classList.add('hidden');
+  els.revealOverlay.hidden = true;
+  els.revealOverlay.setAttribute('aria-hidden', 'true');
+  els.result.innerHTML = '';
+}
+
 /** @param {'truth'|'dare'} type @param {Card} card */
 function showReveal(type, card) {
   const label = type === 'truth' ? '真心話' : '大冒險';
   els.result.innerHTML = `
     <article class="card-reveal ${type}">
       <div class="tag">${label}</div>
-      <p>${escapeHtml(card.text)}</p>
+      <p id="revealTitle">${escapeHtml(card.text)}</p>
     </article>
   `;
+  els.revealOverlay.classList.remove('hidden');
+  els.revealOverlay.hidden = false;
+  els.revealOverlay.setAttribute('aria-hidden', 'false');
 }
 
 /** @param {'truth'|'dare'} type */
@@ -253,11 +265,15 @@ async function fetchFromCustomApi(cfg) {
 }
 
 function bindEvents() {
+  if (els.revealOverlay) {
+    els.revealOverlay.addEventListener('click', hideReveal);
+  }
+
   els.btnNew.addEventListener('click', () => {
     if (!confirm('確定要開啟新局？本局已抽過的紀錄將全部清除。')) return;
     const session = createNewSession();
     saveSession(session);
-    els.result.innerHTML = '';
+    hideReveal();
     hideError();
     updateUI(session);
   });
