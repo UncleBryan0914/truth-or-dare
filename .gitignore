@@ -1,0 +1,11 @@
+# 本機 API 金鑰（若使用 config.js）
+public/config.js
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# deps（若日後加）
+node_modules/

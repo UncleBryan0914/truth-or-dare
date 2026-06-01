@@ -1,0 +1,11 @@
+{
+  "name": "truth-or-dare",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build:cards": "node scripts/build-card-faces.mjs"
+  },
+  "devDependencies": {
+    "sharp": "^0.34.2"
+  }
+}
