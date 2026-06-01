@@ -4,8 +4,10 @@
 
 | 檔案 | 說明 |
 |------|------|
-| `truth-card-preview.png` | 真心話牌面（含剪影） |
-| `dare-card-draft.png` | 大冒險牌面（含剪影） |
+| `truth ref.png` | 真心話牌面參考（含剪影與 TRUTH 字） |
+| `dare ref.png` | 大冒險牌面參考（含剪影與 DARE 字） |
+
+亦支援舊檔名 `truth-card-preview.png`、`dare-card-draft.png`。
 
 亦可使用同名 `.svg`。
 

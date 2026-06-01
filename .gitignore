@@ -10,3 +10,4 @@ Thumbs.db
 
 # deps（若日後加）
 node_modules/
+.bin/
