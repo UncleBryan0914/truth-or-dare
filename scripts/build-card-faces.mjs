@@ -32,13 +32,40 @@ function labelSvg(label) {
 </svg>`);
 }
 
-/** @param {import('sharp').Sharp} pipeline */
+/** Sample solid card background from corners (avoids picking white silhouettes). */
 async function backgroundRgb(pipeline) {
-  const { dominant } = await pipeline.clone().stats();
+  const meta = await pipeline.metadata();
+  const w = meta.width ?? 1;
+  const h = meta.height ?? 1;
+  const patch = Math.min(24, Math.floor(w / 6), Math.floor(h / 6));
+
+  const regions = [
+    { left: 0, top: 0 },
+    { left: Math.max(0, w - patch), top: 0 },
+    { left: 0, top: Math.max(0, h - patch) },
+    { left: Math.max(0, w - patch), top: Math.max(0, h - patch) },
+  ];
+
+  let r = 0;
+  let g = 0;
+  let b = 0;
+  let n = 0;
+
+  for (const { left, top } of regions) {
+    const { dominant } = await pipeline
+      .clone()
+      .extract({ left, top, width: patch, height: patch })
+      .stats();
+    r += dominant.r;
+    g += dominant.g;
+    b += dominant.b;
+    n += 1;
+  }
+
   return {
-    r: Math.round(dominant.r),
-    g: Math.round(dominant.g),
-    b: Math.round(dominant.b),
+    r: Math.round(r / n),
+    g: Math.round(g / n),
+    b: Math.round(b / n),
   };
 }
 
@@ -54,7 +81,8 @@ async function buildCard(input, output, label) {
 
   const silhouette = await source
     .clone()
-    .resize(W, TOP_H, { fit: 'contain', background })
+    .flatten({ background })
+    .resize(W, TOP_H, { fit: 'cover', position: 'centre' })
     .png()
     .toBuffer();
 
