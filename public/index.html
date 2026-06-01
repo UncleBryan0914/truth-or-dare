@@ -16,7 +16,8 @@
       --muted: #94a3b8;
       --card-w: min(160px, 28vw);
       --card-h: calc(var(--card-w) * 1.45);
-      --count-inset: clamp(4px, 1.2vw, 8px);
+      /* 牌堆視覺寬度（含堆疊右移 8px，與 .deck:nth-child(3) 一致） */
+      --pile-visual-w: calc(var(--card-w) + 8px);
     }
 
     * { box-sizing: border-box; }
@@ -90,22 +91,22 @@
 
     .deck-wrap {
       position: relative;
-      width: var(--card-w);
+      width: var(--pile-visual-w);
       height: calc(var(--card-h) + 24px);
-      margin-bottom: 0.5rem;
+      margin-bottom: 0.35rem;
     }
 
     .pile-remaining {
       margin: 0;
-      width: var(--card-w);
+      width: var(--pile-visual-w);
       max-width: 100%;
       box-sizing: border-box;
-      padding: 0.25rem var(--count-inset);
+      padding: 0.2rem 0;
       font-size: clamp(0.82rem, 2.8vw, 0.95rem);
       color: var(--muted);
       text-align: center;
       line-height: 1.35;
-      letter-spacing: 0.02em;
+      letter-spacing: 0.01em;
     }
 
     .pile-remaining strong {
