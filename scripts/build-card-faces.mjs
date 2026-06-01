@@ -168,15 +168,17 @@ async function isolateWhiteSilhouettes(pipeline, bg) {
     return sharp(out, { raw: { width: w, height: h, channels: 3 } });
   }
 
-  const cx = Math.max(2, Math.floor(cropW * 0.1));
-  const cy = Math.max(2, Math.floor(cropH * 0.1));
+  const edge = Math.max(3, Math.floor(Math.min(cropW, cropH) * 0.07));
   for (let y = minY; y <= maxY; y++) {
     for (let x = minX; x <= maxX; x++) {
       const lx = x - minX;
       const ly = y - minY;
-      const inCorner =
-        (lx < cx || lx >= cropW - cx) && (ly < cy || ly >= cropH - cy);
-      if (!inCorner) continue;
+      const onEdge =
+        lx < edge ||
+        lx >= cropW - edge ||
+        ly < edge ||
+        ly >= cropH - edge;
+      if (!onEdge) continue;
       const i = y * w + x;
       mask[i] = 0;
       const o = i * 3;
