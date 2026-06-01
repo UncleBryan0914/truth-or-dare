@@ -162,12 +162,18 @@ function escapeHtml(s) {
   return d.innerHTML;
 }
 
+const REVEAL_CLOSE_MS = 200;
+
 function hideReveal() {
   if (!els.revealOverlay) return;
-  els.revealOverlay.classList.add('hidden');
-  els.revealOverlay.hidden = true;
+  els.revealOverlay.classList.remove('is-open');
   els.revealOverlay.setAttribute('aria-hidden', 'true');
-  els.result.innerHTML = '';
+  window.setTimeout(() => {
+    if (els.revealOverlay.classList.contains('is-open')) return;
+    els.revealOverlay.classList.add('hidden');
+    els.revealOverlay.hidden = true;
+    els.result.innerHTML = '';
+  }, REVEAL_CLOSE_MS);
 }
 
 /** @param {'truth'|'dare'} type @param {Card} card */
@@ -182,6 +188,12 @@ function showReveal(type, card) {
   els.revealOverlay.classList.remove('hidden');
   els.revealOverlay.hidden = false;
   els.revealOverlay.setAttribute('aria-hidden', 'false');
+  els.revealOverlay.classList.remove('is-open');
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      els.revealOverlay.classList.add('is-open');
+    });
+  });
 }
 
 /** @param {'truth'|'dare'} type */
