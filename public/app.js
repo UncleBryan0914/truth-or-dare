@@ -137,11 +137,14 @@ function updateUI(session) {
   if (els.pileRemainingTruth) els.pileRemainingTruth.classList.toggle('empty', truthEmpty);
   if (els.pileRemainingDare) els.pileRemainingDare.classList.toggle('empty', dareEmpty);
 
-  els.truthDeck.querySelectorAll('.deck').forEach((el) => {
-    el.classList.toggle('disabled', truthEmpty);
+  els.truthDeck.classList.toggle('is-empty', truthEmpty);
+  els.dareDeck.classList.toggle('is-empty', dareEmpty);
+
+  els.truthDeck.querySelectorAll('.deck.face').forEach((el) => {
+    el.classList.toggle('disabled', false);
   });
-  els.dareDeck.querySelectorAll('.deck').forEach((el) => {
-    el.classList.toggle('disabled', dareEmpty);
+  els.dareDeck.querySelectorAll('.deck.face').forEach((el) => {
+    el.classList.toggle('disabled', false);
   });
 
   els.history.innerHTML = session.history.length
@@ -291,13 +294,15 @@ function bindEvents() {
   });
 
   els.truthDeck.addEventListener('click', (e) => {
-    const deck = e.target.closest('.deck');
-    if (deck && !deck.classList.contains('disabled')) drawCard('truth');
+    if (els.truthDeck.classList.contains('is-empty')) return;
+    const deck = e.target.closest('.deck.face');
+    if (deck) drawCard('truth');
   });
 
   els.dareDeck.addEventListener('click', (e) => {
-    const deck = e.target.closest('.deck');
-    if (deck && !deck.classList.contains('disabled')) drawCard('dare');
+    if (els.dareDeck.classList.contains('is-empty')) return;
+    const deck = e.target.closest('.deck.face');
+    if (deck) drawCard('dare');
   });
 }
 

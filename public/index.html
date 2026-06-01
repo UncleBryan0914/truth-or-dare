@@ -174,6 +174,38 @@
       filter: grayscale(0.4);
     }
 
+    /* 牌堆抽完：底部顯示灰階空卡（無圖、無字） */
+    .deck-empty {
+      position: absolute;
+      inset: 0;
+      width: var(--card-w);
+      height: var(--card-h);
+      border-radius: 12px;
+      border: 2px solid rgba(148, 163, 184, 0.28);
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+      background: linear-gradient(155deg, #94a3b8 0%, #64748b 48%, #475569 100%);
+      background-image: none;
+      transform: translate(8px, 8px);
+      z-index: 3;
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      cursor: default;
+      filter: grayscale(1);
+      transition: opacity 0.25s ease, visibility 0.25s ease;
+    }
+
+    .deck-wrap.is-empty .deck.face {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+
+    .deck-wrap.is-empty .deck-empty {
+      opacity: 0.92;
+      visibility: visible;
+    }
+
     .reveal-overlay {
       position: fixed;
       inset: 0;
@@ -347,6 +379,7 @@
         <div class="deck face truth" data-type="truth" aria-label="真心話牌堆">TRUTH</div>
         <div class="deck face truth" aria-hidden="true"></div>
         <div class="deck face truth" aria-hidden="true"></div>
+        <div class="deck deck-empty" aria-hidden="true" aria-label="真心話牌堆已空"></div>
       </div>
       <p class="pile-remaining" id="pileRemainingTruth">
         真心話 <strong id="countTruth">0</strong> 張
@@ -358,6 +391,7 @@
         <div class="deck face dare" data-type="dare" aria-label="大冒險牌堆">DARE</div>
         <div class="deck face dare" aria-hidden="true"></div>
         <div class="deck face dare" aria-hidden="true"></div>
+        <div class="deck deck-empty" aria-hidden="true" aria-label="大冒險牌堆已空"></div>
       </div>
       <p class="pile-remaining" id="pileRemainingDare">
         大冒險 <strong id="countDare">0</strong> 張
