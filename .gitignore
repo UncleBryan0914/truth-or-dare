@@ -1,5 +1,6 @@
-# 本機 API 金鑰（若使用 config.js）
-public/config.js
+# 本機密鑰（勿 commit）
+.env
+.env.local
 
 # OS / editor
 .DS_Store

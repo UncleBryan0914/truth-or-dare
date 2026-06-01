@@ -39,12 +39,6 @@
       letter-spacing: 0.05em;
     }
 
-    header p {
-      margin: 0.35rem 0 0;
-      color: var(--muted);
-      font-size: 0.95rem;
-    }
-
     .toolbar {
       display: flex;
       flex-wrap: wrap;
@@ -54,8 +48,7 @@
       padding: 0.75rem 1rem 1rem;
     }
 
-    .toolbar button,
-    .toolbar label {
+    .toolbar button {
       font: inherit;
       border-radius: 999px;
       border: none;
@@ -70,16 +63,6 @@
     }
 
     .btn-new:hover { filter: brightness(1.08); }
-
-    .status {
-      background: var(--panel);
-      padding: 0.55rem 1rem;
-      border-radius: 999px;
-      font-size: 0.9rem;
-      color: var(--muted);
-    }
-
-    .status strong { color: var(--text); }
 
     .arena {
       display: grid;
@@ -104,20 +87,29 @@
       border: 1px solid rgba(148, 163, 184, 0.15);
     }
 
-    .pile h2 {
-      margin: 0 0 0.75rem;
-      font-size: 1.15rem;
-    }
-
-    .pile.truth h2 { color: #93c5fd; }
-    .pile.dare h2 { color: #fca5a5; }
-
     .deck-wrap {
       position: relative;
       width: var(--card-w);
       height: calc(var(--card-h) + 24px);
-      margin-bottom: 0.75rem;
+      margin-bottom: 0.5rem;
     }
+
+    .pile-remaining {
+      margin: 0;
+      font-size: 0.95rem;
+      color: var(--muted);
+      text-align: center;
+    }
+
+    .pile-remaining strong {
+      font-size: 1.15em;
+      font-weight: 700;
+    }
+
+    .pile.truth .pile-remaining strong { color: #93c5fd; }
+    .pile.dare .pile-remaining strong { color: #fca5a5; }
+
+    .pile-remaining.empty { opacity: 0.5; }
 
     .deck {
       position: absolute;
@@ -169,22 +161,6 @@
       cursor: not-allowed;
       filter: grayscale(0.4);
     }
-
-    .draw-btn {
-      width: 100%;
-      max-width: 220px;
-      padding: 0.7rem;
-      border: none;
-      border-radius: 10px;
-      font: inherit;
-      font-weight: 600;
-      cursor: pointer;
-      color: white;
-    }
-
-    .pile.truth .draw-btn { background: var(--truth); }
-    .pile.dare .draw-btn { background: var(--dare); }
-    .draw-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
     .result-panel {
       max-width: 720px;
@@ -284,38 +260,35 @@
 
   <header>
     <h1>真心話大冒險</h1>
-    <p>左邊抽真心話 · 右邊抽大冒險 · 本局已抽過的卡不會再出現</p>
   </header>
 
   <div class="toolbar">
     <button type="button" class="btn-new" id="btnNewGame">開啟新局</button>
-    <div class="status" id="statusBar">
-      真心話 <strong id="countTruth">0</strong> 張 ·
-      大冒險 <strong id="countDare">0</strong> 張
-    </div>
   </div>
 
   <div id="errorBanner" class="error-banner" role="alert"></div>
 
   <main class="arena">
     <section class="pile truth" aria-label="真心話牌堆">
-      <h2>真心話</h2>
       <div class="deck-wrap" id="truthDeckVisual">
         <div class="deck face truth" data-type="truth" aria-label="真心話牌堆">TRUTH</div>
         <div class="deck face truth" aria-hidden="true"></div>
         <div class="deck face truth" aria-hidden="true"></div>
       </div>
-      <button type="button" class="draw-btn" id="btnDrawTruth">抽一張真心話</button>
+      <p class="pile-remaining" id="pileRemainingTruth">
+        真心話 <strong id="countTruth">0</strong> 張
+      </p>
     </section>
 
     <section class="pile dare" aria-label="大冒險牌堆">
-      <h2>大冒險</h2>
       <div class="deck-wrap" id="dareDeckVisual">
         <div class="deck face dare" data-type="dare" aria-label="大冒險牌堆">DARE</div>
         <div class="deck face dare" aria-hidden="true"></div>
         <div class="deck face dare" aria-hidden="true"></div>
       </div>
-      <button type="button" class="draw-btn" id="btnDrawDare">抽一張大冒險</button>
+      <p class="pile-remaining" id="pileRemainingDare">
+        大冒險 <strong id="countDare">0</strong> 張
+      </p>
     </section>
   </main>
 
@@ -326,20 +299,7 @@
     <ul id="historyList"></ul>
   </section>
 
-  <!-- 部署時改為你的 API；留空則使用內建示範卡牌 -->
-  <script>
-    window.GAME_CONFIG = {
-      // 例：Supabase REST → 'https://xxxx.supabase.co/rest/v1'
-      // 例：自建 API   → 'https://your-api.com/api'
-      apiBaseUrl: '',
-      // Supabase 需 anon key；自建 API 可留空
-      apiKey: '',
-      // 若用 Supabase，表名預設如下；自建 API 請實作 GET /cards
-      useSupabaseRest: false,
-      truthTable: 'truth_cards',
-      dareTable: 'dare_cards',
-    };
-  </script>
+  <script src="./config.js"></script>
   <script src="./app.js"></script>
 </body>
 </html>

@@ -78,6 +78,13 @@ cd truth-or-dare
 
 Cursor：**Open Folder** → 本 repo；新 chat 可引用本檔。
 
+## 請 Agent 代為連接 Supabase + Vercel
+
+1. 複製 `.env.example` → `.env.local`，填入 Supabase API（或設在 Cursor Cloud Agent **Secrets**）。
+2. 在 repo 根目錄執行：`npm run setup:cloud`
+3. 若有 `VERCEL_TOKEN` + `VERCEL_PROJECT_ID`，會一併寫入 Vercel 環境變數；完成後到 Vercel **Redeploy**。
+4. **不必**再跑 SQL Editor；題目只在 Table Editor 維護，重整遊戲網頁即更新。
+
 ## 請 Agent 更新 GitHub 時
 
 在 Cursor 開啟本 repo 資料夾後說：**「請 commit 並 push 到 GitHub」**。

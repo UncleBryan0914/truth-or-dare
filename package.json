@@ -3,7 +3,10 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build:cards": "node scripts/build-card-faces.mjs"
+    "build": "node scripts/inject-vercel-config.mjs",
+    "build:cards": "node scripts/build-card-faces.mjs",
+    "setup:cloud": "node scripts/setup-cloud.mjs",
+    "verify:supabase": "node scripts/verify-supabase.mjs"
   },
   "devDependencies": {
     "sharp": "^0.34.2"
