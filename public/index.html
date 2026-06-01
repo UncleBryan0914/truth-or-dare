@@ -104,14 +104,6 @@
       border: 1px solid rgba(148, 163, 184, 0.15);
     }
 
-    .pile h2 {
-      margin: 0 0 0.75rem;
-      font-size: 1.15rem;
-    }
-
-    .pile.truth h2 { color: #93c5fd; }
-    .pile.dare h2 { color: #fca5a5; }
-
     .deck-wrap {
       position: relative;
       width: var(--card-w);
@@ -319,8 +311,20 @@
     <ul id="historyList"></ul>
   </section>
 
-  <!-- 本機：複製 config.example.js → config.js；Vercel：build 時自動產生 config.js -->
-  <script src="./config.js"></script>
+  <!-- 部署時改為你的 API；留空則使用內建示範卡牌 -->
+  <script>
+    window.GAME_CONFIG = {
+      // 例：Supabase REST → 'https://xxxx.supabase.co/rest/v1'
+      // 例：自建 API   → 'https://your-api.com/api'
+      apiBaseUrl: '',
+      // Supabase 需 anon key；自建 API 可留空
+      apiKey: '',
+      // 若用 Supabase，表名預設如下；自建 API 請實作 GET /cards
+      useSupabaseRest: false,
+      truthTable: 'truth_cards',
+      dareTable: 'dare_cards',
+    };
+  </script>
   <script src="./app.js"></script>
 </body>
 </html>
