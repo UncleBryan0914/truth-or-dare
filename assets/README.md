@@ -7,7 +7,9 @@
 | `truth-card-master.png` | `截圖 2026-06-02 凌晨12.17.19.png`（真心話） |
 | `dare-card-master.png` | `截圖 2026-06-02 凌晨12.17.29.png`（大冒險） |
 
-## Mac 一鍵匯入
+## Mac 一鍵匯入（建議）
+
+將 Cursor 對話中上傳的兩張截圖存到本機後執行：
 
 ```bash
 node scripts/import-card-masters.mjs \
@@ -15,6 +17,8 @@ node scripts/import-card-masters.mjs \
   "/Users/bryanchou/Documents/截圖 2026-06-02 凌晨12.17.29.png"
 npm run build:cards
 ```
+
+或手動複製為 `assets/truth-card-master.png`、`assets/dare-card-master.png` 後執行 `npm run build:cards`。
 
 ## 建置原則
 

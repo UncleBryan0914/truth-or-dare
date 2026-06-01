@@ -106,9 +106,40 @@ async function trimScreenshotMargins(pipeline) {
   });
 }
 
+/** @param {import('sharp').Sharp} pipeline */
+async function maybeTrimScreenshot(pipeline) {
+  const meta = await pipeline.metadata();
+  const tw = meta.width ?? 0;
+  const th = meta.height ?? 0;
+  const cardAspect = W / H;
+  const srcAspect = tw / th;
+
+  // Already a card-sized asset — do not trim (avoids eating the artwork).
+  if (tw >= W * 0.9 && th >= H * 0.9 && Math.abs(srcAspect - cardAspect) / cardAspect < 0.06) {
+    return pipeline;
+  }
+
+  return trimScreenshotMargins(pipeline);
+}
+
 /** Scale master screenshot to output card size (uniform scale, centred crop). */
 async function scaleMasterToCard(input) {
-  const trimmed = await trimScreenshotMargins(sharp(input));
+  const trimmed = await maybeTrimScreenshot(sharp(input));
+  const meta = await trimmed.metadata();
+  const tw = meta.width ?? 0;
+  const th = meta.height ?? 0;
+  const cardAspect = W / H;
+  const srcAspect = tw / th;
+  const aspectClose = Math.abs(srcAspect - cardAspect) / cardAspect < 0.04;
+
+  if (tw === W && th === H) {
+    return trimmed.png().toBuffer();
+  }
+
+  if (aspectClose && Math.abs(tw - W) < 8 && Math.abs(th - H) < 8) {
+    return trimmed.resize(W, H, { kernel: 'lanczos3' }).png().toBuffer();
+  }
+
   return trimmed.resize(W, H, { fit: 'cover', position: 'centre', kernel: 'lanczos3' }).png().toBuffer();
 }
 
@@ -294,8 +325,9 @@ async function smoothSilhouetteEdges(pngBuffer, bg) {
     return next;
   };
 
-  let smooth = erode(dilate(mask, 1), 1);
-  smooth = dilate(erode(smooth, 1), 1);
+  const radius = 2;
+  let smooth = erode(dilate(mask, radius), radius);
+  smooth = dilate(erode(smooth, radius), radius);
 
   const { r: br, g: bgg, b: bb } = bg;
   const cleaned = Buffer.alloc(w * h * 3);
@@ -383,9 +415,14 @@ async function tryImportMastersFromEnv() {
 await mkdir(OUT, { recursive: true });
 await tryImportMastersFromEnv();
 
-if ((await exists(MASTER_TRUTH)) && (await exists(MASTER_DARE))) {
+const truthInput = process.argv[2] || MASTER_TRUTH;
+const dareInput = process.argv[3] || MASTER_DARE;
+
+if ((await exists(truthInput)) && (await exists(dareInput))) {
   console.log('Using screenshot masters (pixel-faithful mode)');
-  await buildFromMasters(MASTER_TRUTH, MASTER_DARE);
+  console.log(`  truth: ${truthInput}`);
+  console.log(`  dare:  ${dareInput}`);
+  await buildFromMasters(truthInput, dareInput);
 } else {
   console.error(
     [
