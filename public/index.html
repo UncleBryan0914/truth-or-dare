@@ -16,6 +16,7 @@
       --muted: #94a3b8;
       --card-w: min(160px, 28vw);
       --card-h: calc(var(--card-w) * 1.45);
+      --count-inset: clamp(4px, 1.2vw, 8px);
     }
 
     * { box-sizing: border-box; }
@@ -96,9 +97,15 @@
 
     .pile-remaining {
       margin: 0;
-      font-size: 0.95rem;
+      width: var(--card-w);
+      max-width: 100%;
+      box-sizing: border-box;
+      padding: 0.25rem var(--count-inset);
+      font-size: clamp(0.82rem, 2.8vw, 0.95rem);
       color: var(--muted);
       text-align: center;
+      line-height: 1.35;
+      letter-spacing: 0.02em;
     }
 
     .pile-remaining strong {
