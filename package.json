@@ -3,6 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "build": "node scripts/inject-vercel-config.mjs",
     "build:cards": "node scripts/build-card-faces.mjs"
   },
   "devDependencies": {

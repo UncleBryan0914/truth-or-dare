@@ -55,10 +55,30 @@ open index.html          # macOS
 npx --yes serve .
 ```
 
-## 部署（前端）
+## 部署（Vercel）
+
+1. [vercel.com](https://vercel.com) → **Add New Project** → 匯入 `UncleBryan0914/truth-or-dare`。
+2. 框架選 **Other**；Build Command / Output 已由 `vercel.json` 設定（`public`）。
+3. **Production 網址**（固定、公開）：`main` 分支部署後，例如 `https://truth-or-dare.vercel.app`。
+4. **Preview 測試網址**（非 main 分支 / PR）：每次 push 產生 `https://truth-or-dare-git-分支名-帳號.vercel.app`。
+5. **測試不公開、正式公開**（建議）  
+   Project → **Settings** → **Deployment Protection** → **Standard Protection**（Hobby 可用）：  
+   - Preview / 部署網址：需 Vercel 登入或團隊權限（非完全公開）  
+   - Production 自訂網域 / 正式網址：維持公開  
+6. 環境變數（Settings → Environment Variables）：
+
+| 變數 | Production | Preview | 說明 |
+|------|------------|---------|------|
+| `GAME_API_BASE_URL` | 正式 Supabase REST | 測試 REST | 留空則用示範卡牌 |
+| `GAME_API_KEY` | 正式 anon key | 測試 anon key | |
+| `GAME_USE_SUPABASE` | `true` | `true` | 可選 |
+
+Build 時會執行 `scripts/inject-vercel-config.mjs` 產生 `public/config.js`。
+
+## 部署（Netlify，備選）
 
 1. Push 到 GitHub。
-2. Vercel / Netlify 連動 repo，發佈目錄 `public`（見 `vercel.json`）。
+2. Netlify 連動 repo，發佈目錄 `public`（見 `netlify.toml`）。
 
 ## 規劃中：自訂牌組
 

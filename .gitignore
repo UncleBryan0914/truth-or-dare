@@ -1,5 +1,5 @@
-# 本機 API 金鑰（若使用 config.js）
-public/config.js
+# 本機含金鑰的覆寫檔（可選，勿 commit）
+public/config.local.js
 
 # OS / editor
 .DS_Store

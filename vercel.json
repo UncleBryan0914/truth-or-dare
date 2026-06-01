@@ -1,5 +1,5 @@
 {
-  "buildCommand": null,
+  "buildCommand": "node scripts/inject-vercel-config.mjs",
   "outputDirectory": "public",
   "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
 }
