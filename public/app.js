@@ -262,9 +262,6 @@ function bindEvents() {
     updateUI(session);
   });
 
-  els.btnTruth.addEventListener('click', () => drawCard('truth'));
-  els.btnDare.addEventListener('click', () => drawCard('dare'));
-
   els.truthDeck.addEventListener('click', (e) => {
     const deck = e.target.closest('.deck');
     if (deck && !deck.classList.contains('disabled')) drawCard('truth');

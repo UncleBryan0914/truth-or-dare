@@ -108,8 +108,26 @@
       position: relative;
       width: var(--card-w);
       height: calc(var(--card-h) + 24px);
-      margin-bottom: 0.75rem;
+      margin-bottom: 0.5rem;
     }
+
+    .pile-remaining {
+      margin: 0;
+      font-size: 0.95rem;
+      color: var(--muted);
+      text-align: center;
+    }
+
+    .pile-remaining strong {
+      color: var(--text);
+      font-size: 1.15em;
+      font-weight: 700;
+    }
+
+    .pile.truth .pile-remaining strong { color: #93c5fd; }
+    .pile.dare .pile-remaining strong { color: #fca5a5; }
+
+    .pile-remaining.empty { opacity: 0.5; }
 
     .deck {
       position: absolute;
