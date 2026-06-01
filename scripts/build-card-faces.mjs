@@ -19,11 +19,10 @@ const H = CARD_HEIGHT_1X * 2;
 const LABEL_H = Math.round(H * 0.25);
 const ART_H = H - LABEL_H;
 
-/** Tiny inset from card edges inside the art band */
-const ART_MARGIN = 0.025;
-const ART_FIT_W = Math.round(W * (1 - ART_MARGIN * 2));
-const ART_FIT_H = Math.round(ART_H * (1 - ART_MARGIN * 2));
-const ART_TOP = Math.round(ART_H * ART_MARGIN);
+const ART_PAD_X = Math.round(W * 0.05);
+const ART_PAD_TOP = Math.round(ART_H * 0.04);
+const ART_MAX_W = W - ART_PAD_X * 2;
+const ART_MAX_H = Math.round(ART_H * 0.96);
 
 /** @param {string} label */
 function labelSvg(label) {
@@ -301,48 +300,24 @@ function fillHeadArcs(mask, out, w, minX, minY, maxX, maxY, zones) {
   }
 }
 
-/**
- * @param {import('sharp').Sharp} art
- * @param {number} squeeze horizontal scale (<1 = tighter grouping)
- * @param {boolean} fillWidth prefer spanning card width (for wide DARE art)
- */
-async function fitArt(art, squeeze, fillWidth = false) {
-  let pipe = art;
-  const before = await pipe.metadata();
+/** Uniform scale — preserve silhouette aspect ratio, max size inside art band. */
+async function fitArt(art) {
+  const before = await art.metadata();
   if (!before.width || !before.height) {
     throw new Error('fitArt: empty input');
   }
 
-  if (squeeze !== 1) {
-    const sw = Math.max(1, Math.round(before.width * squeeze));
-    const sh = Math.max(1, before.height);
-    pipe = pipe.resize(sw, sh, { fit: 'fill' });
-  }
-
-  if (fillWidth) {
-    let buf = await pipe
-      .resize(ART_FIT_W, null, { withoutEnlargement: false })
-      .png()
-      .toBuffer();
-    const sized = await sharp(buf).metadata();
-    if ((sized.height ?? 0) > ART_FIT_H) {
-      buf = await sharp(buf).resize(null, ART_FIT_H).png().toBuffer();
-    }
-    return buf;
-  }
-
-  return pipe
-    .resize(ART_FIT_W, ART_FIT_H, { fit: 'inside', withoutEnlargement: false })
+  return art
+    .resize(ART_MAX_W, ART_MAX_H, { fit: 'inside', withoutEnlargement: false })
     .png()
     .toBuffer();
 }
 
-/** Align silhouette bottoms; center horizontally with minimal side margin. */
-function artPlacement(fw, fh) {
-  const bottom = ART_TOP + ART_FIT_H;
+/** Fixed top inset + horizontal center (original card layout). */
+function artPlacement(fw) {
   return {
     left: Math.round((W - fw) / 2),
-    top: bottom - fh,
+    top: ART_PAD_TOP,
   };
 }
 
@@ -350,10 +325,9 @@ function artPlacement(fw, fh) {
  * @param {string} input
  * @param {string} output
  * @param {string} label
- * @param {{ squeeze?: number, stripEdge?: boolean }} [opts]
+ * @param {{ stripEdge?: boolean, restoreHeads?: boolean, gentlePrune?: boolean }} [opts]
  */
 async function buildCard(input, output, label, opts = {}) {
-  const squeeze = opts.squeeze ?? 1;
   const stripEdge = opts.stripEdge ?? false;
   const restoreHeads = opts.restoreHeads ?? false;
   const source = sharp(input);
@@ -371,9 +345,9 @@ async function buildCard(input, output, label, opts = {}) {
   if (!isoMeta.width || !isoMeta.height) {
     throw new Error(`Empty silhouette for ${input}`);
   }
-  const fitted = await fitArt(isolated, squeeze, opts.fillWidth ?? false);
-  const { width: fw = 0, height: fh = 0 } = await sharp(fitted).metadata();
-  const { left, top } = artPlacement(fw, fh);
+  const fitted = await fitArt(isolated);
+  const { width: fw = 0 } = await sharp(fitted).metadata();
+  const { left, top } = artPlacement(fw);
   const labelBand = labelSvg(label);
 
   await sharp({
@@ -411,20 +385,9 @@ const jobs = [
     'truth-card-preview',
     'truth-card-preview.png',
     'TRUTH',
-    {
-      squeeze: 1,
-      stripEdge: false,
-      restoreHeads: false,
-      gentlePrune: true,
-      fillWidth: true,
-    },
+    { stripEdge: false, restoreHeads: false, gentlePrune: true },
   ],
-  [
-    'dare-card-draft',
-    'dare-card-draft.png',
-    'DARE',
-    { squeeze: 0.22, stripEdge: true, restoreHeads: false, fillWidth: true },
-  ],
+  ['dare-card-draft', 'dare-card-draft.png', 'DARE', { stripEdge: true }],
 ];
 
 await mkdir(OUT, { recursive: true });
