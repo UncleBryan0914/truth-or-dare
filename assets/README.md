@@ -1,23 +1,28 @@
-# 牌面原始圖
+# 牌面主檔（截圖）
 
-將以下檔案放在此目錄後執行 `npm run build:cards`：
+請將兩張截圖放到此目錄後執行 `npm run build:cards`：
 
-| 檔案 | 說明 |
+| 檔案 | 來源 |
 |------|------|
-| `truth-card-preview.png` | 真心話牌面（含剪影） |
-| `dare-card-draft.png` | 大冒險牌面（含剪影） |
+| `truth-card-master.png` | `截圖 2026-06-02 凌晨12.17.19.png`（真心話） |
+| `dare-card-master.png` | `截圖 2026-06-02 凌晨12.17.29.png`（大冒險） |
 
-亦可使用同名 `.svg`。
+## Mac 一鍵匯入（建議）
 
-## 卡牌尺寸（與 `public/index.html` 牌堆一致）
+將 Cursor 對話中上傳的兩張截圖存到本機後執行：
 
-| 版本 | 寬 × 高 | 高寬比 |
-|------|---------|--------|
-| @1x（CSS `--card-w` / `--card-h`） | **160 × 232 px** | **1.45**（高 > 寬） |
-| @2x（建置輸出） | **320 × 464 px** | 同上 |
+```bash
+node scripts/import-card-masters.mjs \
+  "/Users/bryanchou/Documents/截圖 2026-06-02 凌晨12.17.19.png" \
+  "/Users/bryanchou/Documents/截圖 2026-06-02 凌晨12.17.29.png"
+npm run build:cards
+```
 
-直式比例約 **5∶7.25**，接近常見撲克牌 **5∶7**（1.4）。您附圖中的藍色牌堆即此比例。
+或手動複製為 `assets/truth-card-master.png`、`assets/dare-card-master.png` 後執行 `npm run build:cards`。
 
-建置版面：上方 **75%** 完整容納白色剪影（`contain`、水平置中、略偏上）；下方 **25%** 為加粗斜體、橫跨全寬的 **TRUTH** / **DARE**。
+## 建置原則
 
-環境變數 `CARD_SRC_DIR` 可指定其他來源目錄。
+- **完整保留**截圖中的比例、字體、剪影位置與大小（僅等比縮放到 320×464）。
+- **僅調整**：(1) 兩張牌的 TRUTH / DARE 字樣垂直對齊；(2) 大冒險上方剪影區去毛邊。
+
+產出：`public/images/cards/`（@2x 320×464、@1x 160×232）。
