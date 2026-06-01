@@ -68,8 +68,15 @@ async function backgroundRgb(pipeline) {
  * @param {{ r: number, g: number, b: number }} bg
  * @param {boolean} stripEdge
  * @param {boolean} restoreHeads
+ * @param {boolean} gentlePrune
  */
-async function isolateWhiteSilhouettes(pipeline, bg, stripEdge = false, restoreHeads = false) {
+async function isolateWhiteSilhouettes(
+  pipeline,
+  bg,
+  stripEdge = false,
+  restoreHeads = false,
+  gentlePrune = false,
+) {
   const { data, info } = await pipeline
     .rotate()
     .ensureAlpha()
@@ -120,8 +127,8 @@ async function isolateWhiteSilhouettes(pipeline, bg, stripEdge = false, restoreH
     }
   }
 
-  const prunePasses = restoreHeads ? 2 : 3;
-  const pruneMinNeighbors = restoreHeads ? 3 : 4;
+  const prunePasses = gentlePrune ? 0 : restoreHeads ? 2 : 3;
+  const pruneMinNeighbors = gentlePrune ? 2 : restoreHeads ? 3 : 4;
 
   for (let pass = 0; pass < prunePasses; pass++) {
     for (let y = 1; y < h - 1; y++) {
@@ -353,7 +360,13 @@ async function buildCard(input, output, label, opts = {}) {
   const bg = await backgroundRgb(source);
   const background = { r: bg.r, g: bg.g, b: bg.b, alpha: 1 };
 
-  const isolated = await isolateWhiteSilhouettes(source, bg, stripEdge, restoreHeads);
+  const isolated = await isolateWhiteSilhouettes(
+    source,
+    bg,
+    stripEdge,
+    restoreHeads,
+    opts.gentlePrune ?? false,
+  );
   const isoMeta = await isolated.metadata();
   if (!isoMeta.width || !isoMeta.height) {
     throw new Error(`Empty silhouette for ${input}`);
@@ -398,13 +411,19 @@ const jobs = [
     'truth-card-preview',
     'truth-card-preview.png',
     'TRUTH',
-    { squeeze: 1, stripEdge: false, restoreHeads: true },
+    {
+      squeeze: 1,
+      stripEdge: false,
+      restoreHeads: false,
+      gentlePrune: true,
+      fillWidth: true,
+    },
   ],
   [
     'dare-card-draft',
     'dare-card-draft.png',
     'DARE',
-    { squeeze: 0.26, stripEdge: true, restoreHeads: false, fillWidth: true },
+    { squeeze: 0.22, stripEdge: true, restoreHeads: false, fillWidth: true },
   ],
 ];
 
