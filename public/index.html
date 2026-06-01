@@ -129,13 +129,6 @@
       box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
       transition: transform 0.15s ease, box-shadow 0.15s ease;
       cursor: pointer;
-      display: flex;
-      align-items: flex-end;
-      justify-content: center;
-      padding-bottom: 0.65rem;
-      font-weight: 700;
-      font-size: 0.85rem;
-      letter-spacing: 0.08em;
       user-select: none;
     }
 
@@ -144,11 +137,25 @@
     .deck:nth-child(3) { transform: translate(8px, 8px); z-index: 3; opacity: 0.84; }
 
     .deck.face.truth {
-      background: linear-gradient(145deg, var(--truth) 0%, var(--truth-dark) 100%);
+      background-color: var(--truth-dark);
+      background-image: image-set(
+        url('./images/cards/truth-card-preview@1x.png') 1x,
+        url('./images/cards/truth-card-preview.png') 2x
+      );
+      background-size: cover;
+      background-position: center;
+      color: transparent;
     }
 
     .deck.face.dare {
-      background: linear-gradient(145deg, var(--dare) 0%, var(--dare-dark) 100%);
+      background-color: var(--dare-dark);
+      background-image: image-set(
+        url('./images/cards/dare-card-draft@1x.png') 1x,
+        url('./images/cards/dare-card-draft.png') 2x
+      );
+      background-size: cover;
+      background-position: center;
+      color: transparent;
     }
 
     .deck:not(.disabled):hover {
@@ -294,7 +301,7 @@
     <section class="pile truth" aria-label="真心話牌堆">
       <h2>真心話</h2>
       <div class="deck-wrap" id="truthDeckVisual">
-        <div class="deck face truth" data-type="truth">TRUTH</div>
+        <div class="deck face truth" data-type="truth" aria-label="真心話牌堆">TRUTH</div>
         <div class="deck face truth" aria-hidden="true"></div>
         <div class="deck face truth" aria-hidden="true"></div>
       </div>
@@ -304,7 +311,7 @@
     <section class="pile dare" aria-label="大冒險牌堆">
       <h2>大冒險</h2>
       <div class="deck-wrap" id="dareDeckVisual">
-        <div class="deck face dare" data-type="dare">DARE</div>
+        <div class="deck face dare" data-type="dare" aria-label="大冒險牌堆">DARE</div>
         <div class="deck face dare" aria-hidden="true"></div>
         <div class="deck face dare" aria-hidden="true"></div>
       </div>
