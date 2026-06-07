@@ -62,7 +62,17 @@ const els = {
   result: $('#resultPanel'),
   history: $('#historyList'),
   crossDeckModeBtns: document.querySelectorAll('.cross-deck-mode__btn'),
+  playModeHelp: $('#btnPlayModeHelp'),
+  playModeTooltip: $('#playModeTooltip'),
 };
+
+const MOBILE_MAX_WIDTH = 640;
+const CARD_ASPECT = 1.45;
+const CARD_WRAP_EXTRA = 24;
+const MIN_MOBILE_CARD_W = 72;
+const MAX_MOBILE_CARD_W = 160;
+
+let mobileFitRaf = 0;
 
 /** @type {DeckCatalog} */
 let baseCatalog = { truth: [], dare: [] };
@@ -118,10 +128,136 @@ function getOrInitSession() {
 function showError(msg) {
   els.error.textContent = msg;
   els.error.classList.add('visible');
+  scheduleMobileFit();
 }
 
 function hideError() {
   els.error.classList.remove('visible');
+  scheduleMobileFit();
+}
+
+function isMobileLayout() {
+  return window.matchMedia(`(max-width: ${MOBILE_MAX_WIDTH}px)`).matches;
+}
+
+function measureFixedChromeHeight() {
+  let height = 0;
+  const header = document.querySelector('header');
+  const toolbar = document.querySelector('.toolbar');
+  if (header) height += header.getBoundingClientRect().height;
+  if (toolbar) height += toolbar.getBoundingClientRect().height;
+  if (els.error?.classList.contains('visible')) height += els.error.getBoundingClientRect().height;
+  return height;
+}
+
+function applyMobileCardWidth(cardW) {
+  document.documentElement.style.setProperty('--card-w', `${Math.floor(cardW)}px`);
+}
+
+function resetMobileCardWidth() {
+  document.documentElement.style.removeProperty('--card-w');
+}
+
+function fitMobileArena() {
+  if (!isMobileLayout()) {
+    resetMobileCardWidth();
+    return;
+  }
+
+  const viewportH = window.visualViewport?.height ?? window.innerHeight;
+  const chromeH = measureFixedChromeHeight();
+  const arena = document.querySelector('.arena');
+  const arenaStyles = arena ? getComputedStyle(arena) : null;
+  const arenaGap = arenaStyles ? parseFloat(arenaStyles.rowGap || arenaStyles.gap || '8') : 8;
+  const arenaPad =
+    (arenaStyles ? parseFloat(arenaStyles.paddingTop) + parseFloat(arenaStyles.paddingBottom) : 14) + 4;
+
+  const pile = document.querySelector('.pile');
+  const pileStyles = pile ? getComputedStyle(pile) : null;
+  const pilePad = pileStyles ? parseFloat(pileStyles.paddingTop) + parseFloat(pileStyles.paddingBottom) : 17.6;
+  const pileRemaining = 24;
+  const deckMargin = 4;
+  const perPileFixed = pilePad + CARD_WRAP_EXTRA + deckMargin + pileRemaining;
+  const available = viewportH - chromeH - arenaGap - arenaPad - 2 * perPileFixed;
+
+  let cardW = available / (2 * CARD_ASPECT);
+  cardW = Math.max(MIN_MOBILE_CARD_W, Math.min(MAX_MOBILE_CARD_W, cardW));
+  applyMobileCardWidth(cardW);
+
+  const tighten = () => {
+    if (!isMobileLayout() || !arena) return;
+    const overflow = arena.getBoundingClientRect().bottom - viewportH + 6;
+    if (overflow > 0 && cardW > MIN_MOBILE_CARD_W) {
+      cardW = Math.max(MIN_MOBILE_CARD_W, cardW - Math.ceil(overflow / (2 * CARD_ASPECT)) - 1);
+      applyMobileCardWidth(cardW);
+    }
+  };
+
+  requestAnimationFrame(() => {
+    tighten();
+    requestAnimationFrame(tighten);
+  });
+}
+
+function scheduleMobileFit() {
+  cancelAnimationFrame(mobileFitRaf);
+  mobileFitRaf = requestAnimationFrame(() => fitMobileArena());
+}
+
+function positionPlayModeTooltip() {
+  const tooltip = els.playModeTooltip;
+  if (!tooltip?.classList.contains('is-open')) {
+    tooltip.style.removeProperty('transform');
+    return;
+  }
+
+  tooltip.style.transform = 'translateX(-50%)';
+
+  requestAnimationFrame(() => {
+    const pad = 8;
+    const rect = tooltip.getBoundingClientRect();
+    const vw = window.innerWidth;
+    let shiftX = 0;
+
+    if (rect.right > vw - pad) shiftX += rect.right - (vw - pad);
+    if (rect.left < pad) shiftX -= pad - rect.left;
+
+    tooltip.style.transform = shiftX ? `translateX(calc(-50% - ${shiftX}px))` : 'translateX(-50%)';
+  });
+}
+
+function setPlayModeTooltipOpen(open) {
+  const tooltip = els.playModeTooltip;
+  const help = els.playModeHelp;
+  if (!tooltip || !help) return;
+
+  tooltip.classList.toggle('is-open', open);
+  help.setAttribute('aria-expanded', open ? 'true' : 'false');
+
+  if (open) positionPlayModeTooltip();
+  else tooltip.style.removeProperty('transform');
+}
+
+function bindPlayModeHelp() {
+  const help = els.playModeHelp;
+  const tooltip = els.playModeTooltip;
+  if (!help || !tooltip) return;
+
+  help.addEventListener('click', (e) => {
+    e.stopPropagation();
+    setPlayModeTooltipOpen(!tooltip.classList.contains('is-open'));
+  });
+
+  document.addEventListener('click', () => setPlayModeTooltipOpen(false));
+
+  const onViewportChange = () => {
+    if (tooltip.classList.contains('is-open')) positionPlayModeTooltip();
+    scheduleMobileFit();
+  };
+
+  window.addEventListener('resize', onViewportChange);
+  window.visualViewport?.addEventListener('resize', onViewportChange);
+  window.visualViewport?.addEventListener('scroll', onViewportChange);
 }
 
 function setLoading(on) {
@@ -211,6 +347,8 @@ function updateUI(session) {
   els.dareDeck.querySelectorAll('.deck.face').forEach((el) => {
     el.classList.toggle('disabled', false);
   });
+
+  scheduleMobileFit();
 
   els.history.innerHTML = session.history.length
     ? session.history
@@ -396,6 +534,7 @@ async function fetchFromCustomApi(cfg) {
 
 function bindEvents() {
   window.TempCards?.init?.();
+  bindPlayModeHelp();
 
   if (els.revealOverlay) {
     els.revealOverlay.addEventListener('click', hideReveal);
@@ -460,6 +599,7 @@ async function init() {
     updateUI(getOrInitSession());
   } finally {
     setLoading(false);
+    scheduleMobileFit();
   }
 }
 
