@@ -62,7 +62,7 @@
       align-items: center;
     }
 
-    .toolbar button {
+    .toolbar__primary button {
       font: inherit;
       border-radius: 999px;
       border: none;
@@ -388,18 +388,87 @@
       padding: 0 1rem 1.5rem;
     }
 
+    /* ── PC 版（≥641px）：第 2 列操作鈕、第 3 列遊玩模式，字級統一 ── */
     @media (min-width: 641px) {
-      .toolbar {
-        flex-wrap: nowrap;
+      :root {
+        --desktop-ui-font: 0.72rem;
+        --desktop-action-gap: 0.4rem;
       }
 
-      .toolbar button.btn-new,
-      .toolbar button.btn-temp-manage {
+      .toolbar {
+        flex-direction: column;
+        flex-wrap: nowrap;
+        align-items: center;
+        gap: 0.65rem;
+      }
+
+      .toolbar__primary {
+        width: 100%;
+        justify-content: center;
+        gap: var(--desktop-action-gap);
+      }
+
+      .btn-history-mobile {
+        display: none !important;
+      }
+
+      .toolbar__primary button,
+      .cross-deck-mode__label,
+      .cross-deck-mode__btn,
+      .cross-deck-mode__help {
+        font-family: inherit;
+        font-size: var(--desktop-ui-font);
+        font-weight: 600;
+        line-height: 1.2;
+      }
+
+      .toolbar__primary button {
         height: var(--toolbar-control-h);
         padding: 0 1.1rem;
         display: inline-flex;
         align-items: center;
         justify-content: center;
+        box-sizing: border-box;
+      }
+
+      .cross-deck-mode {
+        width: auto;
+        max-width: 100%;
+        justify-content: center;
+        gap: var(--desktop-action-gap);
+        padding: 0 0.55rem;
+      }
+
+      .cross-deck-mode__label {
+        flex: 0 0 auto;
+        white-space: nowrap;
+      }
+
+      .cross-deck-mode__group {
+        flex: 0 0 auto;
+        height: calc(var(--toolbar-control-h) - 4px);
+      }
+
+      .cross-deck-mode__btn {
+        height: 100%;
+        padding: 0 0.5rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        box-sizing: border-box;
+      }
+
+      .cross-deck-mode__btn:not(:last-child) {
+        border-right: none;
+      }
+
+      .cross-deck-mode__help {
+        flex: 0 0 auto;
+        width: var(--toolbar-control-h);
+        height: var(--toolbar-control-h);
+        min-width: var(--toolbar-control-h);
+        font-size: var(--desktop-ui-font);
+        line-height: 1;
       }
     }
 
@@ -712,8 +781,17 @@
       to { opacity: 1; transform: scale(1); }
     }
 
-    /* 手機版：單一區塊置於樣式表末尾，避免被上方 .pile 等基底規則覆蓋 */
+    /* ── M 版（≤640px）：五區塊直向排版，規則集中於此 ── */
     @media (max-width: 640px) {
+      :root {
+        --gap-n: 12px;
+        --gap-title: 18px;
+        --mobile-action-gap: 0.4rem;
+        --mobile-ui-font: 0.72rem;
+        --mobile-btn-h: 2rem;
+        --deck-wrap-extra: 22px;
+      }
+
       html,
       body {
         height: 100%;
@@ -728,97 +806,133 @@
         overflow: hidden;
       }
 
-      :root {
-        --mobile-pile-scale: 0.9;
-        --deck-wrap-extra: 21.6px;
-        --mobile-section-gap: 8px;
-        --mobile-title-gap: 12px;
-        --mobile-action-font: 0.72rem;
-      }
-
+      /* 區塊 1–5 容器 */
       .app-frame {
         flex: 1;
         min-height: 0;
         display: flex;
         flex-direction: column;
-        gap: var(--mobile-section-gap, 8px);
+        gap: var(--gap-n);
         overflow: hidden;
         width: 100%;
-        max-width: 100%;
-        padding: var(--mobile-title-gap, 12px) 1rem
-          max(var(--mobile-section-gap, 8px), env(safe-area-inset-bottom, 0px));
+        padding: var(--gap-title) 1rem
+          max(var(--gap-n), env(safe-area-inset-bottom, 0px));
         box-sizing: border-box;
       }
 
+      /* 區塊 1：標題（上邊界 = N×1.5，與區塊 2 間距 = N×1.5） */
       header {
-        padding: 0;
-        margin: 0 0 calc(var(--mobile-title-gap, 12px) - var(--mobile-section-gap, 8px));
         flex-shrink: 0;
+        padding: 0;
+        margin: 0 0 calc(var(--gap-title) - var(--gap-n));
+        text-align: center;
       }
 
       header h1 {
+        margin: 0;
         font-size: 1.2rem;
         line-height: 1.2;
+        letter-spacing: 0.05em;
       }
 
+      /* 區塊 2–3：工具列直向堆疊 */
       .toolbar {
-        display: contents;
+        flex-shrink: 0;
+        display: flex;
+        flex-direction: column;
+        gap: var(--gap-n);
+        padding: 0;
+        margin: 0;
+        max-width: none;
       }
 
+      /* 區塊 2–3：共用字級與按鈕高度（單一規則，避免選擇器權重衝突） */
       .toolbar__primary {
         display: flex;
-        justify-content: space-between;
+        justify-content: center;
         align-items: center;
-        gap: 0.35rem;
+        gap: var(--mobile-action-gap);
         width: 100%;
       }
 
-      .toolbar__primary button {
-        flex: 0 1 auto;
-        padding: 0.55rem 0.7rem;
-        font-size: var(--mobile-action-font, 0.72rem);
+      .toolbar__primary button,
+      .cross-deck-mode__label,
+      .cross-deck-mode__btn,
+      .cross-deck-mode__help {
+        font-family: inherit;
+        font-size: var(--mobile-ui-font);
+        font-weight: 600;
         line-height: 1.2;
+      }
+
+      .toolbar__primary button {
+        flex: 0 0 auto;
+        height: var(--mobile-btn-h);
+        padding: 0 0.6rem;
         white-space: nowrap;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        box-sizing: border-box;
+      }
+
+      .cross-deck-mode__btn {
+        flex: 1 1 0;
+        min-width: 0;
+        height: 100%;
+        padding: 0 0.55rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        box-sizing: border-box;
+        border: none;
+        cursor: pointer;
+      }
+
+      .cross-deck-mode__btn:not(:last-child) {
+        border-right: none;
       }
 
       .btn-history-mobile {
         display: inline-flex;
-        align-items: center;
-        justify-content: center;
       }
 
+      /* 區塊 3：與區塊 2 相同——置中相鄰排列，間距一致；按鈕組寬度由 JS 依實測 ×160% 設定 */
       .cross-deck-mode {
         width: 100%;
-        max-width: none;
         height: auto;
         min-height: unset;
+        padding: 0.35rem 0.45rem;
         border-radius: 1rem;
-        padding: 0.5rem 0.75rem;
-        justify-content: space-between;
-        gap: 0.4rem;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: var(--mobile-action-gap);
       }
 
-      .cross-deck-mode__label,
-      .cross-deck-mode__btn {
-        font-size: var(--mobile-action-font, 0.72rem);
+      .cross-deck-mode__label {
+        flex: 0 0 auto;
+        white-space: nowrap;
       }
 
       .cross-deck-mode__group {
-        flex: 1;
-        height: auto;
-        min-height: 1.85rem;
-        justify-content: stretch;
-      }
-
-      .cross-deck-mode__btn {
-        flex: 1;
-        padding: 0.45rem 0.4rem;
+        flex: 0 0 auto;
+        width: var(--play-mode-group-w, max-content);
+        height: var(--mobile-btn-h);
+        min-height: var(--mobile-btn-h);
+        border-radius: 999px;
+        overflow: hidden;
+        display: flex;
       }
 
       .cross-deck-mode__help {
-        width: 1.25rem;
-        height: 1.25rem;
-        font-size: var(--mobile-action-font, 0.72rem);
+        flex: 0 0 auto;
+        width: var(--mobile-btn-h);
+        height: var(--mobile-btn-h);
+        min-width: var(--mobile-btn-h);
+        padding: 0;
+        line-height: 1;
+        border-radius: 50%;
       }
 
       .error-banner {
@@ -831,36 +945,41 @@
         display: none;
       }
 
+      /* 區塊 4–5：抽牌區（平分剩餘高度） */
       .arena {
-        display: contents;
+        flex: 1;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+        gap: var(--gap-n);
+        padding: 0;
+        margin: 0;
+        max-width: none;
       }
 
-      .toolbar__primary,
-      .cross-deck-mode,
       .pile {
-        width: 100%;
-        flex-shrink: 0;
-      }
-
-      .pile {
+        flex: 1;
+        min-height: 0;
         display: flex;
         flex-direction: column;
         align-items: center;
-        padding: calc(0.5rem * var(--mobile-pile-scale))
-          calc(0.55rem * var(--mobile-pile-scale))
-          calc(0.28rem * var(--mobile-pile-scale));
-        border-radius: calc(1rem * var(--mobile-pile-scale));
+        justify-content: center;
+        padding: 0.35rem 0.45rem;
+        overflow: hidden;
       }
 
       .deck-wrap {
-        margin-bottom: 0.06rem;
+        flex-shrink: 0;
+        margin-bottom: 0.2rem;
       }
 
       .pile-remaining {
+        flex-shrink: 0;
         width: calc(var(--pile-visual-w) * 0.8);
         max-width: 80%;
-        font-size: calc(var(--mobile-action-font, 0.72rem) * 0.95);
-        padding: 0.05rem 0 0;
+        margin: 0;
+        padding: 0;
+        font-size: calc(var(--mobile-ui-font) * 0.95 * 1.5);
         line-height: 1.2;
       }
 
@@ -881,8 +1000,8 @@
   <div class="toolbar">
     <div class="toolbar__primary">
       <button type="button" class="btn-new" id="btnNewGame">開啟新局</button>
-      <button type="button" class="btn-temp-manage" id="btnManageTemp">管理臨時新增題目</button>
-      <button type="button" class="btn-temp-manage btn-history-mobile" id="historyBar" aria-haspopup="dialog" aria-controls="historyOverlay">局內紀錄</button>
+      <button type="button" class="btn-temp-manage" id="btnManageTemp">管理臨時牌庫</button>
+      <button type="button" class="btn-temp-manage btn-history-mobile" id="historyBar" aria-haspopup="dialog" aria-controls="historyOverlay">抽卡紀錄</button>
     </div>
     <div class="cross-deck-mode" role="group" aria-label="遊玩模式設定">
       <span class="cross-deck-mode__label">遊玩模式</span>
@@ -959,7 +1078,7 @@
 
   <div class="modal-overlay hidden" id="historyOverlay" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="historyPopupTitle" hidden>
     <div class="modal-sheet modal-sheet--history" role="document">
-      <h2 id="historyPopupTitle">局內紀錄</h2>
+      <h2 id="historyPopupTitle">抽卡紀錄</h2>
       <div class="history-popup-body">
         <ul id="historyListPopup" class="history-list"></ul>
       </div>

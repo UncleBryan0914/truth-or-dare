@@ -73,15 +73,17 @@ const els = {
 
 const MOBILE_MAX_WIDTH = 640;
 const CARD_ASPECT = 1.45;
-const MOBILE_PILE_SCALE = 0.9;
-const MOBILE_TITLE_GAP_RATIO = 1.65;
-const MOBILE_TITLE_GAP_MIN_EXTRA = 6;
-const MOBILE_INTER_GAP_COUNT = 4;
-const MOBILE_TITLE_GAP_SLOTS = 2;
-const MIN_MOBILE_SECTION_GAP = 6;
-const MIN_MOBILE_TITLE_GAP = 10;
-const MIN_MOBILE_CARD_W = 52;
-const MAX_MOBILE_CARD_W = 144;
+const TITLE_GAP_RATIO = 1.5;
+const MIN_GAP_N = 6;
+const MAX_GAP_N = 16;
+const PLAY_MODE_GROUP_SCALE = 1.6;
+const DEFAULT_UI_FONT_REM = 0.72;
+const MIN_UI_FONT_REM = 0.62;
+const MIN_CARD_W = 48;
+const MAX_CARD_W = 148;
+const BTN_PAD_Y_REM = 0.45;
+const BTN_LINE_HEIGHT = 1.2;
+const PILE_LABEL_GAP_PX = 4;
 
 let mobileFitRaf = 0;
 
@@ -153,215 +155,177 @@ function isMobileLayout() {
 
 function getDeckWrapExtra() {
   const raw = getComputedStyle(document.documentElement).getPropertyValue('--deck-wrap-extra');
-  return parseFloat(raw) || 24;
+  return parseFloat(raw) || 22;
 }
 
-function getMobileViewportHeight() {
-  return window.visualViewport?.height ?? window.innerHeight;
+function getMobileBtnHeightPx(fontRem) {
+  const root = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+  return BTN_PAD_Y_REM * 2 * root + fontRem * root * BTN_LINE_HEIGHT;
 }
 
-function getMobileTitleGap(sectionGap) {
-  return Math.max(
-    MIN_MOBILE_TITLE_GAP,
-    Math.round(sectionGap * MOBILE_TITLE_GAP_RATIO),
-    sectionGap + MOBILE_TITLE_GAP_MIN_EXTRA
+function applyMobileTokens(gapN, fontRem) {
+  const n = Math.max(MIN_GAP_N, Math.round(gapN));
+  const titleGap = Math.round(n * TITLE_GAP_RATIO);
+  const btnH = getMobileBtnHeightPx(fontRem);
+  const root = document.documentElement;
+  root.style.setProperty('--gap-n', `${n}px`);
+  root.style.setProperty('--gap-title', `${titleGap}px`);
+  root.style.setProperty('--mobile-ui-font', `${fontRem}rem`);
+  root.style.setProperty('--mobile-btn-h', `${Math.ceil(btnH)}px`);
+}
+
+function clearMobileTokens() {
+  ['--gap-n', '--gap-title', '--mobile-ui-font', '--mobile-btn-h', '--card-w', '--play-mode-group-w'].forEach(
+    (prop) => {
+      document.documentElement.style.removeProperty(prop);
+    }
   );
 }
 
-function setMobileSectionGap(gapPx) {
-  document.documentElement.style.setProperty(
-    '--mobile-section-gap',
-    `${Math.max(0, Math.floor(gapPx))}px`
-  );
+function measurePlayModeGroupBaseWidth(group) {
+  const probe = group.cloneNode(true);
+  probe.style.cssText =
+    'position:fixed;left:-9999px;top:0;visibility:hidden;pointer-events:none;width:max-content;max-width:none;';
+  probe.querySelectorAll('.cross-deck-mode__btn').forEach((btn) => {
+    btn.style.flex = '0 0 auto';
+    btn.style.width = 'auto';
+    btn.style.minWidth = '0';
+  });
+  document.body.appendChild(probe);
+  const width = probe.getBoundingClientRect().width;
+  probe.remove();
+  return width;
 }
 
-function setMobileTitleGap(gapPx) {
-  document.documentElement.style.setProperty(
-    '--mobile-title-gap',
-    `${Math.max(0, Math.floor(gapPx))}px`
-  );
+function applyPlayModeGroupWidth() {
+  if (!isMobileLayout()) {
+    document.documentElement.style.removeProperty('--play-mode-group-w');
+    return null;
+  }
+
+  const row = document.querySelector('.cross-deck-mode');
+  const group = document.querySelector('.cross-deck-mode__group');
+  const label = document.querySelector('.cross-deck-mode__label');
+  const help = document.querySelector('.cross-deck-mode__help');
+  if (!row || !group) return null;
+
+  const baseWidth = measurePlayModeGroupBaseWidth(group);
+  let targetWidth = Math.ceil(baseWidth * PLAY_MODE_GROUP_SCALE);
+
+  const rowStyles = getComputedStyle(row);
+  const rowPadding =
+    parseFloat(rowStyles.paddingLeft) + parseFloat(rowStyles.paddingRight);
+  const actionGap = parseFloat(rowStyles.columnGap || rowStyles.gap) || 0;
+  const sideWidth = (label?.offsetWidth || 0) + (help?.offsetWidth || 0) + actionGap * 2;
+  const maxGroupWidth = Math.max(0, row.clientWidth - rowPadding - sideWidth);
+  targetWidth = Math.min(targetWidth, maxGroupWidth);
+
+  document.documentElement.style.setProperty('--play-mode-group-w', `${targetWidth}px`);
+  return { baseWidth, targetWidth, scale: PLAY_MODE_GROUP_SCALE };
 }
 
-function applyMobileLayoutGaps(sectionGap, titleGap) {
-  setMobileSectionGap(sectionGap);
-  setMobileTitleGap(titleGap);
-}
-
-function clearMobileLayoutGaps() {
-  document.documentElement.style.removeProperty('--mobile-section-gap');
-  document.documentElement.style.removeProperty('--mobile-title-gap');
-}
-
-function getMobileInterGapCount() {
-  return els.error?.classList.contains('visible') ? MOBILE_INTER_GAP_COUNT + 1 : MOBILE_INTER_GAP_COUNT;
-}
-
-function getMobileGapBudget(sectionGap, titleGap) {
-  return MOBILE_TITLE_GAP_SLOTS * titleGap + getMobileInterGapCount() * sectionGap;
-}
-
-function measureMobileNonCardHeight() {
-  let height = 0;
-  const header = document.querySelector('header');
-  const primary = document.querySelector('.toolbar__primary');
-  const playMode = document.querySelector('.cross-deck-mode');
-  if (header) height += header.getBoundingClientRect().height;
-  if (primary) height += primary.getBoundingClientRect().height;
-  if (playMode) height += playMode.getBoundingClientRect().height;
-  if (els.error?.classList.contains('visible')) height += els.error.getBoundingClientRect().height;
-  return height;
-}
-
-function measureMobilePileChromeHeight() {
-  const pile = document.querySelector('.pile');
-  if (!pile) return 36;
+function measurePileCardBudget(pile) {
+  if (!pile) return 0;
   const styles = getComputedStyle(pile);
-  const pad = parseFloat(styles.paddingTop) + parseFloat(styles.paddingBottom);
-  const remaining = document.querySelector('.pile-remaining')?.getBoundingClientRect().height ?? 16;
-  const deckWrap = document.querySelector('.deck-wrap');
-  const deckMargin = deckWrap ? parseFloat(getComputedStyle(deckWrap).marginBottom) || 0 : 0;
-  return pad + getDeckWrapExtra() + deckMargin + remaining;
+  const pad =
+    parseFloat(styles.paddingTop) + parseFloat(styles.paddingBottom);
+  const label = pile.querySelector('.pile-remaining');
+  const labelH = label?.getBoundingClientRect().height ?? 14;
+  return Math.max(0, pile.clientHeight - pad - labelH - PILE_LABEL_GAP_PX);
 }
 
-function measureMobileLayoutOverflow() {
+function computeCardWidthFromPiles() {
+  const piles = document.querySelectorAll('.pile');
+  if (!piles.length) return MIN_CARD_W;
+
+  const extra = getDeckWrapExtra();
+  let cardW = MAX_CARD_W;
+  for (const pile of piles) {
+    const budget = measurePileCardBudget(pile);
+    const w = Math.floor((budget - extra) / CARD_ASPECT);
+    if (w > 0) cardW = Math.min(cardW, w);
+  }
+  return Math.max(MIN_CARD_W, Math.min(MAX_CARD_W, cardW));
+}
+
+function measureMobileBottomOverflow() {
   const frame = els.appFrame;
   const dare = document.querySelector('.pile.dare');
-  const header = document.querySelector('header');
-  if (!frame || !dare || !header) return { bottom: 0, top: 0 };
-
-  const frameRect = frame.getBoundingClientRect();
-  return {
-    bottom: dare.getBoundingClientRect().bottom - frameRect.bottom,
-    top: header.getBoundingClientRect().top - frameRect.top,
-  };
-}
-
-function getCurrentCardWidth() {
-  const raw = getComputedStyle(document.documentElement).getPropertyValue('--card-w');
-  const parsed = parseFloat(raw);
-  return Number.isFinite(parsed) ? parsed : MIN_MOBILE_CARD_W;
+  if (!frame || !dare) return 0;
+  return dare.getBoundingClientRect().bottom - frame.getBoundingClientRect().bottom;
 }
 
 function applyMobileCardWidth(cardW) {
-  document.documentElement.style.setProperty('--card-w', `${Math.floor(cardW)}px`);
+  document.documentElement.style.setProperty(
+    '--card-w',
+    `${Math.max(MIN_CARD_W, Math.min(MAX_CARD_W, Math.floor(cardW)))}px`
+  );
 }
 
-function resetMobileCardWidth() {
-  document.documentElement.style.removeProperty('--card-w');
-}
-
-function enforceMobileLayoutBounds() {
-  if (!isMobileLayout()) return;
-
-  let cardW = getCurrentCardWidth();
-  let sectionGap =
-    parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--mobile-section-gap')) ||
-    MIN_MOBILE_SECTION_GAP;
-  let titleGap = getMobileTitleGap(sectionGap);
-
-  for (let guard = 0; guard < 32; guard += 1) {
-    applyMobileLayoutGaps(sectionGap, titleGap);
-    applyMobileCardWidth(cardW);
-
-    const { bottom, top } = measureMobileLayoutOverflow();
-
-    if (bottom > 0.5) {
-      if (cardW > MIN_MOBILE_CARD_W) {
-        cardW = Math.max(MIN_MOBILE_CARD_W, cardW - 2);
-        continue;
-      }
-      if (sectionGap > MIN_MOBILE_SECTION_GAP) {
-        sectionGap -= 1;
-        titleGap = getMobileTitleGap(sectionGap);
-        continue;
-      }
-      if (titleGap > MIN_MOBILE_TITLE_GAP) {
-        titleGap -= 1;
-        continue;
-      }
-      break;
-    }
-
-    if (top < -0.5 && titleGap > MIN_MOBILE_TITLE_GAP) {
-      titleGap -= 1;
-      continue;
-    }
-
-    break;
-  }
-
-  applyMobileLayoutGaps(sectionGap, titleGap);
-  applyMobileCardWidth(cardW);
-}
-
-function fitMobileArena() {
+function fitMobileLayout() {
   if (!isMobileLayout()) {
-    resetMobileCardWidth();
-    clearMobileLayoutGaps();
+    clearMobileTokens();
     return;
   }
 
-  const viewportH = getMobileViewportHeight();
-  let sectionGap = MIN_MOBILE_SECTION_GAP;
-  let titleGap = getMobileTitleGap(sectionGap);
-  let cardW = MAX_MOBILE_CARD_W;
+  applyMobileCardWidth(MIN_CARD_W);
 
-  for (let i = 0; i < 28; i += 1) {
-    applyMobileLayoutGaps(sectionGap, titleGap);
-    applyMobileCardWidth(cardW);
+  let gapN = 12;
+  let fontRem = DEFAULT_UI_FONT_REM;
 
-    const nonCardH = measureMobileNonCardHeight();
-    const pileChrome = measureMobilePileChromeHeight();
-    const cardArea = 2 * (pileChrome + cardW * CARD_ASPECT);
-    const gapBudget = getMobileGapBudget(sectionGap, titleGap);
-    const slack = viewportH - nonCardH - cardArea - gapBudget;
+  for (let pass = 0; pass < 32; pass += 1) {
+    applyMobileTokens(gapN, fontRem);
+    applyMobileCardWidth(computeCardWidthFromPiles());
 
-    if (slack < -1) {
-      if (cardW > MIN_MOBILE_CARD_W) {
-        cardW = Math.max(MIN_MOBILE_CARD_W, cardW - 2);
+    const overflow = measureMobileBottomOverflow();
+    if (overflow > 0.5) {
+      const current = parseFloat(
+        getComputedStyle(document.documentElement).getPropertyValue('--card-w')
+      );
+      if (current > MIN_CARD_W) {
+        applyMobileCardWidth(current - 2);
         continue;
       }
-      if (sectionGap > MIN_MOBILE_SECTION_GAP) {
-        sectionGap -= 1;
-        titleGap = getMobileTitleGap(sectionGap);
+      if (gapN > MIN_GAP_N) {
+        gapN -= 1;
+        continue;
+      }
+      if (fontRem > MIN_UI_FONT_REM) {
+        fontRem -= 0.02;
         continue;
       }
       break;
     }
-
-    const availableCards =
-      viewportH - gapBudget - nonCardH - 2 * pileChrome;
-    const nextCardW = Math.max(
-      MIN_MOBILE_CARD_W,
-      Math.min(MAX_MOBILE_CARD_W, (availableCards / (2 * CARD_ASPECT)) * MOBILE_PILE_SCALE)
-    );
-
-    if (slack > 2) {
-      const gapShare = slack / (getMobileInterGapCount() + MOBILE_TITLE_GAP_SLOTS * MOBILE_TITLE_GAP_RATIO);
-      sectionGap += gapShare * 0.85;
-      titleGap = getMobileTitleGap(sectionGap);
-    }
-
-    if (Math.abs(nextCardW - cardW) < 0.5) {
-      cardW = nextCardW;
-      break;
-    }
-
-    cardW = nextCardW;
+    break;
   }
 
-  applyMobileLayoutGaps(sectionGap, titleGap);
-  applyMobileCardWidth(cardW);
+  applyMobileTokens(gapN, fontRem);
+  applyMobileCardWidth(computeCardWidthFromPiles());
+  applyPlayModeGroupWidth();
+}
 
-  requestAnimationFrame(() => {
-    enforceMobileLayoutBounds();
-    requestAnimationFrame(enforceMobileLayoutBounds);
-  });
+function refineMobileLayout() {
+  if (!isMobileLayout()) return;
+
+  applyPlayModeGroupWidth();
+  applyMobileCardWidth(computeCardWidthFromPiles());
+  let overflow = measureMobileBottomOverflow();
+  if (overflow <= 0.5) return;
+
+  let cardW = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--card-w'));
+  for (let i = 0; i < 24 && overflow > 0.5 && cardW > MIN_CARD_W; i += 1) {
+    cardW = Math.max(MIN_CARD_W, cardW - 2);
+    applyMobileCardWidth(cardW);
+    overflow = measureMobileBottomOverflow();
+  }
 }
 
 function scheduleMobileFit() {
   cancelAnimationFrame(mobileFitRaf);
-  mobileFitRaf = requestAnimationFrame(() => fitMobileArena());
+  mobileFitRaf = requestAnimationFrame(() => {
+    fitMobileLayout();
+    requestAnimationFrame(refineMobileLayout);
+  });
 }
 
 function positionPlayModeTooltip() {
