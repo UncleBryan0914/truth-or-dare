@@ -85,7 +85,8 @@ const DESKTOP_MODE_ROW_HEIGHT_SCALE = 1.5;
 const DESKTOP_MODE_ROW_WIDTH_SCALE = 1.2;
 const DESKTOP_PLAY_MODE_GROUP_SCALE = 1.6;
 const DESKTOP_BASE_UI_FONT_REM = 0.72;
-const DEFAULT_UI_FONT_REM = 0.72;
+const MOBILE_PRIMARY_BTN_SCALE = 1.5;
+const DEFAULT_UI_FONT_REM = 1.08;
 const MIN_UI_FONT_REM = 0.62;
 const MIN_CARD_W = 48;
 const MAX_CARD_W = 148;
@@ -183,11 +184,39 @@ function applyMobileTokens(gapN, fontRem) {
 }
 
 function clearMobileTokens() {
-  ['--gap-n', '--gap-title', '--mobile-ui-font', '--mobile-btn-h', '--card-w', '--play-mode-group-w'].forEach(
-    (prop) => {
-      document.documentElement.style.removeProperty(prop);
-    }
-  );
+  [
+    '--gap-n',
+    '--gap-title',
+    '--mobile-ui-font',
+    '--mobile-btn-h',
+    '--card-w',
+    '--play-mode-group-w',
+    '--mobile-btn-new-w',
+    '--mobile-btn-manage-w',
+    '--mobile-btn-history-w',
+  ].forEach((prop) => {
+    document.documentElement.style.removeProperty(prop);
+  });
+}
+
+function applyMobilePrimaryButtonWidths() {
+  if (!isMobileLayout()) return;
+
+  const pairs = [
+    ['--mobile-btn-new-w', els.btnNew],
+    ['--mobile-btn-manage-w', els.btnManageTemp],
+    ['--mobile-btn-history-w', els.historyBar],
+  ];
+
+  for (const [prop, btn] of pairs) {
+    if (!btn) continue;
+    document.documentElement.style.removeProperty(prop);
+    const baseW = measureElementBaseWidth(btn);
+    document.documentElement.style.setProperty(
+      prop,
+      `${Math.ceil(baseW * MOBILE_PRIMARY_BTN_SCALE)}px`
+    );
+  }
 }
 
 function clearDesktopTokens() {
@@ -404,6 +433,7 @@ function fitMobileLayout() {
 
   applyMobileTokens(gapN, fontRem);
   applyMobileCardWidth(computeCardWidthFromPiles());
+  applyMobilePrimaryButtonWidths();
   applyPlayModeGroupWidth();
 }
 
@@ -413,6 +443,7 @@ function refineMobileLayout() {
     return;
   }
 
+  applyMobilePrimaryButtonWidths();
   applyPlayModeGroupWidth();
   applyMobileCardWidth(computeCardWidthFromPiles());
   let overflow = measureMobileBottomOverflow();
