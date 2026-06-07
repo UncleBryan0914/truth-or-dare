@@ -74,9 +74,13 @@ const els = {
 const MOBILE_MAX_WIDTH = 640;
 const CARD_ASPECT = 1.45;
 const MOBILE_PILE_SCALE = 0.9;
-const MOBILE_SECTION_GAP_COUNT = 6;
-const MIN_MOBILE_SECTION_GAP = 4;
-const MIN_MOBILE_CARD_W = 58;
+const MOBILE_TITLE_GAP_RATIO = 1.65;
+const MOBILE_TITLE_GAP_MIN_EXTRA = 6;
+const MOBILE_INTER_GAP_COUNT = 4;
+const MOBILE_TITLE_GAP_SLOTS = 2;
+const MIN_MOBILE_SECTION_GAP = 6;
+const MIN_MOBILE_TITLE_GAP = 10;
+const MIN_MOBILE_CARD_W = 52;
 const MAX_MOBILE_CARD_W = 144;
 
 let mobileFitRaf = 0;
@@ -152,6 +156,18 @@ function getDeckWrapExtra() {
   return parseFloat(raw) || 24;
 }
 
+function getMobileViewportHeight() {
+  return window.visualViewport?.height ?? window.innerHeight;
+}
+
+function getMobileTitleGap(sectionGap) {
+  return Math.max(
+    MIN_MOBILE_TITLE_GAP,
+    Math.round(sectionGap * MOBILE_TITLE_GAP_RATIO),
+    sectionGap + MOBILE_TITLE_GAP_MIN_EXTRA
+  );
+}
+
 function setMobileSectionGap(gapPx) {
   document.documentElement.style.setProperty(
     '--mobile-section-gap',
@@ -159,8 +175,29 @@ function setMobileSectionGap(gapPx) {
   );
 }
 
-function clearMobileSectionGap() {
+function setMobileTitleGap(gapPx) {
+  document.documentElement.style.setProperty(
+    '--mobile-title-gap',
+    `${Math.max(0, Math.floor(gapPx))}px`
+  );
+}
+
+function applyMobileLayoutGaps(sectionGap, titleGap) {
+  setMobileSectionGap(sectionGap);
+  setMobileTitleGap(titleGap);
+}
+
+function clearMobileLayoutGaps() {
   document.documentElement.style.removeProperty('--mobile-section-gap');
+  document.documentElement.style.removeProperty('--mobile-title-gap');
+}
+
+function getMobileInterGapCount() {
+  return els.error?.classList.contains('visible') ? MOBILE_INTER_GAP_COUNT + 1 : MOBILE_INTER_GAP_COUNT;
+}
+
+function getMobileGapBudget(sectionGap, titleGap) {
+  return MOBILE_TITLE_GAP_SLOTS * titleGap + getMobileInterGapCount() * sectionGap;
 }
 
 function measureMobileNonCardHeight() {
@@ -177,17 +214,26 @@ function measureMobileNonCardHeight() {
 
 function measureMobilePileChromeHeight() {
   const pile = document.querySelector('.pile');
-  if (!pile) return 40;
+  if (!pile) return 36;
   const styles = getComputedStyle(pile);
   const pad = parseFloat(styles.paddingTop) + parseFloat(styles.paddingBottom);
-  const remaining = document.querySelector('.pile-remaining')?.getBoundingClientRect().height ?? 18;
-  const deckMargin =
-    parseFloat(getComputedStyle(document.querySelector('.deck-wrap') || pile).marginBottom) || 4;
+  const remaining = document.querySelector('.pile-remaining')?.getBoundingClientRect().height ?? 16;
+  const deckWrap = document.querySelector('.deck-wrap');
+  const deckMargin = deckWrap ? parseFloat(getComputedStyle(deckWrap).marginBottom) || 0 : 0;
   return pad + getDeckWrapExtra() + deckMargin + remaining;
 }
 
-function getMobileGapCount() {
-  return els.error?.classList.contains('visible') ? MOBILE_SECTION_GAP_COUNT + 1 : MOBILE_SECTION_GAP_COUNT;
+function measureMobileLayoutOverflow() {
+  const frame = els.appFrame;
+  const dare = document.querySelector('.pile.dare');
+  const header = document.querySelector('header');
+  if (!frame || !dare || !header) return { bottom: 0, top: 0 };
+
+  const frameRect = frame.getBoundingClientRect();
+  return {
+    bottom: dare.getBoundingClientRect().bottom - frameRect.bottom,
+    top: header.getBoundingClientRect().top - frameRect.top,
+  };
 }
 
 function getCurrentCardWidth() {
@@ -204,99 +250,99 @@ function resetMobileCardWidth() {
   document.documentElement.style.removeProperty('--card-w');
 }
 
-function finalizeMobileEqualSpacing(viewportH) {
-  const dare = document.querySelector('.pile.dare');
-  const header = document.querySelector('header');
-  if (!dare || !header) return;
+function enforceMobileLayoutBounds() {
+  if (!isMobileLayout()) return;
 
   let cardW = getCurrentCardWidth();
-  let gapCount = getMobileGapCount();
-  let sectionGap = parseFloat(
-    getComputedStyle(document.documentElement).getPropertyValue('--mobile-section-gap')
-  ) || MIN_MOBILE_SECTION_GAP;
+  let sectionGap =
+    parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--mobile-section-gap')) ||
+    MIN_MOBILE_SECTION_GAP;
+  let titleGap = getMobileTitleGap(sectionGap);
 
-  const tune = () => {
-    const topGap = header.getBoundingClientRect().top;
-    const bottomGap = viewportH - dare.getBoundingClientRect().bottom;
-    return { topGap, bottomGap };
-  };
-
-  let guard = 0;
-  while (guard < 24) {
-    let { topGap, bottomGap } = tune();
-
-    if (topGap < bottomGap - 1 && cardW > MIN_MOBILE_CARD_W) {
-      cardW = Math.max(MIN_MOBILE_CARD_W, cardW - 2);
-      applyMobileCardWidth(cardW);
-      guard += 1;
-      continue;
-    }
-
-    if (topGap > bottomGap + 1 && cardW < MAX_MOBILE_CARD_W) {
-      cardW = Math.min(MAX_MOBILE_CARD_W, cardW + 2);
-      applyMobileCardWidth(cardW);
-      guard += 1;
-      continue;
-    }
-
-    const slack = (topGap + bottomGap) / 2;
-    if (Math.abs(topGap - bottomGap) <= 1 && Math.abs(slack - sectionGap) <= 1) break;
-
-    sectionGap = Math.max(MIN_MOBILE_SECTION_GAP, (topGap + bottomGap) / 2);
-    setMobileSectionGap(sectionGap);
-    guard += 1;
-  }
-
-  if (document.documentElement.scrollHeight > viewportH + 1 && cardW > MIN_MOBILE_CARD_W) {
-    const overflow = document.documentElement.scrollHeight - viewportH;
-    cardW = Math.max(
-      MIN_MOBILE_CARD_W,
-      cardW - Math.ceil(overflow / (2 * CARD_ASPECT)) - 1
-    );
+  for (let guard = 0; guard < 32; guard += 1) {
+    applyMobileLayoutGaps(sectionGap, titleGap);
     applyMobileCardWidth(cardW);
-    const contentH = measureMobileNonCardHeight() + 2 * (measureMobilePileChromeHeight() + cardW * CARD_ASPECT);
-    sectionGap = Math.max(MIN_MOBILE_SECTION_GAP, (viewportH - contentH) / gapCount);
-    setMobileSectionGap(sectionGap);
+
+    const { bottom, top } = measureMobileLayoutOverflow();
+
+    if (bottom > 0.5) {
+      if (cardW > MIN_MOBILE_CARD_W) {
+        cardW = Math.max(MIN_MOBILE_CARD_W, cardW - 2);
+        continue;
+      }
+      if (sectionGap > MIN_MOBILE_SECTION_GAP) {
+        sectionGap -= 1;
+        titleGap = getMobileTitleGap(sectionGap);
+        continue;
+      }
+      if (titleGap > MIN_MOBILE_TITLE_GAP) {
+        titleGap -= 1;
+        continue;
+      }
+      break;
+    }
+
+    if (top < -0.5 && titleGap > MIN_MOBILE_TITLE_GAP) {
+      titleGap -= 1;
+      continue;
+    }
+
+    break;
   }
+
+  applyMobileLayoutGaps(sectionGap, titleGap);
+  applyMobileCardWidth(cardW);
 }
 
 function fitMobileArena() {
   if (!isMobileLayout()) {
     resetMobileCardWidth();
-    clearMobileSectionGap();
+    clearMobileLayoutGaps();
     return;
   }
 
-  const viewportH = window.visualViewport?.height ?? window.innerHeight;
-  const gapCount = getMobileGapCount();
-  const pileChrome = measureMobilePileChromeHeight();
-
-  let sectionGap = 8;
+  const viewportH = getMobileViewportHeight();
+  let sectionGap = MIN_MOBILE_SECTION_GAP;
+  let titleGap = getMobileTitleGap(sectionGap);
   let cardW = MAX_MOBILE_CARD_W;
 
-  for (let i = 0; i < 20; i += 1) {
-    setMobileSectionGap(sectionGap);
+  for (let i = 0; i < 28; i += 1) {
+    applyMobileLayoutGaps(sectionGap, titleGap);
     applyMobileCardWidth(cardW);
 
     const nonCardH = measureMobileNonCardHeight();
+    const pileChrome = measureMobilePileChromeHeight();
     const cardArea = 2 * (pileChrome + cardW * CARD_ASPECT);
-    const nextGap = (viewportH - nonCardH - cardArea) / gapCount;
+    const gapBudget = getMobileGapBudget(sectionGap, titleGap);
+    const slack = viewportH - nonCardH - cardArea - gapBudget;
 
-    if (nextGap < MIN_MOBILE_SECTION_GAP && cardW > MIN_MOBILE_CARD_W) {
-      cardW = Math.max(MIN_MOBILE_CARD_W, cardW - 2);
-      continue;
+    if (slack < -1) {
+      if (cardW > MIN_MOBILE_CARD_W) {
+        cardW = Math.max(MIN_MOBILE_CARD_W, cardW - 2);
+        continue;
+      }
+      if (sectionGap > MIN_MOBILE_SECTION_GAP) {
+        sectionGap -= 1;
+        titleGap = getMobileTitleGap(sectionGap);
+        continue;
+      }
+      break;
     }
 
-    sectionGap = Math.max(MIN_MOBILE_SECTION_GAP, nextGap);
-
     const availableCards =
-      viewportH - gapCount * sectionGap - nonCardH - 2 * pileChrome;
+      viewportH - gapBudget - nonCardH - 2 * pileChrome;
     const nextCardW = Math.max(
       MIN_MOBILE_CARD_W,
       Math.min(MAX_MOBILE_CARD_W, (availableCards / (2 * CARD_ASPECT)) * MOBILE_PILE_SCALE)
     );
 
-    if (Math.abs(nextCardW - cardW) < 0.5 && Math.abs(nextGap - sectionGap) < 0.5) {
+    if (slack > 2) {
+      const gapShare = slack / (getMobileInterGapCount() + MOBILE_TITLE_GAP_SLOTS * MOBILE_TITLE_GAP_RATIO);
+      sectionGap += gapShare * 0.85;
+      titleGap = getMobileTitleGap(sectionGap);
+    }
+
+    if (Math.abs(nextCardW - cardW) < 0.5) {
       cardW = nextCardW;
       break;
     }
@@ -304,12 +350,12 @@ function fitMobileArena() {
     cardW = nextCardW;
   }
 
-  setMobileSectionGap(sectionGap);
+  applyMobileLayoutGaps(sectionGap, titleGap);
   applyMobileCardWidth(cardW);
 
   requestAnimationFrame(() => {
-    finalizeMobileEqualSpacing(viewportH);
-    requestAnimationFrame(() => finalizeMobileEqualSpacing(viewportH));
+    enforceMobileLayoutBounds();
+    requestAnimationFrame(enforceMobileLayoutBounds);
   });
 }
 
