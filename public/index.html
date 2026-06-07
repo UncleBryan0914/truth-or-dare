@@ -810,7 +810,8 @@
         --gap-n: 12px;
         --gap-title: 18px;
         --mobile-action-gap: 0.4rem;
-        --mobile-ui-font: 1.08rem;
+        --mobile-ui-font: 1.008rem;
+        --mobile-pile-count-font: calc(0.72rem * 0.95 * 1.5);
         --mobile-btn-h: 2rem;
         --deck-wrap-extra: 22px;
       }
@@ -932,7 +933,7 @@
         display: inline-flex;
       }
 
-      /* 區塊 3：與區塊 2 相同——置中相鄰排列，間距一致；按鈕組寬度由 JS 依實測 ×160% 設定 */
+      /* 區塊 3：與區塊 2 相同——置中相鄰排列；按鈕組寬度由 JS 依實測 ×128% 設定 */
       .cross-deck-mode {
         width: 100%;
         height: auto;
@@ -1014,7 +1015,7 @@
         max-width: 80%;
         margin: 0;
         padding: 0;
-        font-size: calc(var(--mobile-ui-font) * 0.95 * 1.5);
+        font-size: var(--mobile-pile-count-font);
         line-height: 1.2;
       }
 
