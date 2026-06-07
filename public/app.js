@@ -80,6 +80,7 @@ const PLAY_MODE_GROUP_SCALE = 1.6;
 const DESKTOP_UI_FONT_SCALE = 1.44;
 const DESKTOP_PRIMARY_BTN_SCALE = 1.2;
 const DESKTOP_NEW_BTN_EXTRA_SCALE = 1.296;
+const DESKTOP_MANAGE_BTN_EXTRA_SCALE = 1.1;
 const DESKTOP_MODE_ROW_HEIGHT_SCALE = 1.5;
 const DESKTOP_MODE_ROW_WIDTH_SCALE = 1.2;
 const DESKTOP_PLAY_MODE_GROUP_SCALE = 1.6;
@@ -273,7 +274,7 @@ function applyDesktopToolbarLayout() {
     const baseW = measureElementBaseWidth(els.btnManageTemp);
     root.style.setProperty(
       '--desktop-btn-manage-w',
-      `${Math.ceil(baseW * DESKTOP_PRIMARY_BTN_SCALE)}px`
+      `${Math.ceil(baseW * DESKTOP_PRIMARY_BTN_SCALE * DESKTOP_MANAGE_BTN_EXTRA_SCALE)}px`
     );
   }
 
