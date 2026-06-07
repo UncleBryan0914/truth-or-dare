@@ -73,8 +73,9 @@ const els = {
 
 const MOBILE_MAX_WIDTH = 640;
 const CARD_ASPECT = 1.45;
-const MIN_MOBILE_CARD_W = 64;
-const MAX_MOBILE_CARD_W = 160;
+const MOBILE_PILE_SCALE = 0.9;
+const MIN_MOBILE_CARD_W = 58;
+const MAX_MOBILE_CARD_W = 144;
 
 let mobileFitRaf = 0;
 
@@ -224,7 +225,7 @@ function fitMobileArena() {
   const perPileFixed = pilePad + deckWrapExtra + deckMargin + pileRemaining;
   const available = viewportH - chromeH - arenaGap - arenaPad - 2 * perPileFixed;
 
-  let cardW = available / (2 * CARD_ASPECT);
+  let cardW = (available / (2 * CARD_ASPECT)) * MOBILE_PILE_SCALE;
   cardW = Math.max(MIN_MOBILE_CARD_W, Math.min(MAX_MOBILE_CARD_W, cardW));
   applyMobileCardWidth(cardW);
 

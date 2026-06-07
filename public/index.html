@@ -512,25 +512,41 @@
         max-width: none;
       }
 
+      :root {
+        --mobile-pile-scale: 0.9;
+        --deck-wrap-extra: 21.6px;
+      }
+
+      .toolbar {
+        padding-bottom: 0.35rem;
+      }
+
       .arena {
         flex: 1;
         min-height: 0;
         grid-template-columns: 1fr;
-        gap: 0.5rem;
-        padding: 0.35rem 0 0.5rem;
+        gap: calc(0.5rem * var(--mobile-pile-scale));
+        padding: calc(0.35rem * var(--mobile-pile-scale)) 0 calc(0.5rem * var(--mobile-pile-scale));
         overflow: hidden;
         width: 100%;
         max-width: none;
-        margin: -3px 0 0;
+        margin: -10px 0 0;
+        align-content: start;
       }
 
       .pile {
-        padding: 0.55rem;
+        padding: calc(0.55rem * var(--mobile-pile-scale));
         width: 100%;
+        border-radius: calc(1rem * var(--mobile-pile-scale));
       }
 
       .deck-wrap {
-        margin-bottom: 0.2rem;
+        margin-bottom: calc(0.2rem * var(--mobile-pile-scale));
+      }
+
+      .pile-remaining {
+        font-size: calc(0.82rem * var(--mobile-pile-scale));
+        padding: calc(0.2rem * var(--mobile-pile-scale)) 0;
       }
 
       .history--desktop {
