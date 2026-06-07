@@ -88,6 +88,10 @@
 
     .btn-temp-manage:hover { filter: brightness(1.08); }
 
+    .btn-history-mobile {
+      display: none;
+    }
+
     .cross-deck-mode {
       display: flex;
       flex-wrap: nowrap;
@@ -399,10 +403,6 @@
       }
     }
 
-    .history-bar {
-      display: none;
-    }
-
     @media (max-width: 640px) {
       html,
       body {
@@ -424,132 +424,117 @@
         display: flex;
         flex-direction: column;
         overflow: hidden;
+        width: 100%;
+        max-width: 100%;
+        padding: 0 1rem;
+        box-sizing: border-box;
       }
 
       header {
-        padding: 0.5rem 1rem 0.2rem;
+        padding: 0.65rem 0 0.25rem;
         flex-shrink: 0;
       }
 
       header h1 {
-        font-size: 1.05rem;
+        font-size: 1.2rem;
       }
 
       .toolbar {
         flex-direction: column;
         align-items: stretch;
-        gap: 0.35rem;
-        padding: 0.35rem 1rem 0.35rem;
+        gap: 0.5rem;
+        padding: 0.45rem 0 0.5rem;
         flex-shrink: 0;
+        width: 100%;
+        max-width: none;
+        margin: 0;
       }
 
       .toolbar__primary {
-        justify-content: center;
-        gap: 0.45rem;
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 0.4rem;
+        width: 100%;
       }
 
-      .toolbar button {
-        padding: 0.42rem 0.85rem;
-        font-size: 0.82rem;
+      .toolbar__primary button {
+        padding: 0.55rem 0.35rem;
+        font-size: 0.72rem;
+        line-height: 1.2;
+        min-width: 0;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .btn-history-mobile {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
       }
 
       .cross-deck-mode {
         width: 100%;
         max-width: none;
         height: auto;
-        min-height: 2rem;
+        min-height: unset;
         border-radius: 1rem;
-        padding: 0.4rem 0.6rem;
+        padding: 0.55rem 0.75rem;
         justify-content: space-between;
-        gap: 0.35rem;
+        gap: 0.4rem;
       }
 
       .cross-deck-mode__label {
-        font-size: 0.74rem;
+        font-size: 0.8rem;
       }
 
       .cross-deck-mode__group {
         flex: 1;
-        height: 1.65rem;
+        height: 1.75rem;
         justify-content: stretch;
       }
 
       .cross-deck-mode__btn {
         flex: 1;
-        padding: 0 0.25rem;
-        font-size: 0.74rem;
+        padding: 0.45rem 0.35rem;
+        font-size: 0.8rem;
       }
 
       .cross-deck-mode__help {
-        width: 1.2rem;
-        height: 1.2rem;
-        font-size: 0.68rem;
+        width: 1.25rem;
+        height: 1.25rem;
+        font-size: 0.72rem;
       }
 
       .error-banner {
         flex-shrink: 0;
-        margin: 0 1rem 0.25rem;
+        margin: 0 0 0.35rem;
+        max-width: none;
       }
 
       .arena {
         flex: 1;
         min-height: 0;
         grid-template-columns: 1fr;
-        gap: 0.35rem;
-        padding: 0.2rem 1rem 0.25rem;
+        gap: 0.5rem;
+        padding: 0.35rem 0 0.5rem;
         overflow: hidden;
-        align-content: stretch;
+        width: 100%;
+        max-width: none;
+        margin: 0;
       }
 
       .pile {
-        padding: 0.3rem 0.45rem;
-        min-height: 0;
+        padding: 0.55rem;
+        width: 100%;
       }
 
       .deck-wrap {
-        margin-bottom: 0.15rem;
-        height: calc(var(--card-h) + var(--deck-wrap-extra));
-      }
-
-      .pile-remaining {
-        font-size: 0.72rem;
-        padding: 0.1rem 0;
-        line-height: 1.25;
-      }
-
-      :root {
-        --deck-wrap-extra: 14px;
+        margin-bottom: 0.2rem;
       }
 
       .history--desktop {
         display: none;
-      }
-
-      .history-bar {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        flex-shrink: 0;
-        width: 100%;
-        margin: 0;
-        border: none;
-        border-top: 1px solid rgba(148, 163, 184, 0.22);
-        background: rgba(15, 23, 42, 0.96);
-        color: var(--muted);
-        font: inherit;
-        font-size: 0.8rem;
-        font-weight: 600;
-        letter-spacing: 0.03em;
-        text-align: center;
-        padding: 0.5rem 1rem;
-        padding-bottom: max(0.5rem, env(safe-area-inset-bottom, 0px));
-        cursor: pointer;
-        -webkit-tap-highlight-color: transparent;
-      }
-
-      .history-bar:active {
-        background: rgba(30, 41, 59, 0.98);
-        color: var(--text);
       }
     }
 
@@ -875,6 +860,7 @@
     <div class="toolbar__primary">
       <button type="button" class="btn-new" id="btnNewGame">開啟新局</button>
       <button type="button" class="btn-temp-manage" id="btnManageTemp">管理臨時新增題目</button>
+      <button type="button" class="btn-temp-manage btn-history-mobile" id="historyBar" aria-haspopup="dialog" aria-controls="historyOverlay">局內紀錄</button>
     </div>
     <div class="cross-deck-mode" role="group" aria-label="遊玩模式設定">
       <span class="cross-deck-mode__label">遊玩模式</span>
@@ -922,10 +908,6 @@
   </main>
   </div>
 
-  <button type="button" class="history-bar" id="historyBar" aria-haspopup="dialog" aria-controls="historyOverlay">
-    <span id="historyBarLabel">本局紀錄</span>
-  </button>
-
   <div class="modal-overlay hidden" id="tempMenuOverlay" role="dialog" aria-modal="true" aria-hidden="true" hidden>
     <div class="modal-sheet" role="document">
       <h2>臨時新增題目</h2>
@@ -955,7 +937,7 @@
 
   <div class="modal-overlay hidden" id="historyOverlay" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="historyPopupTitle" hidden>
     <div class="modal-sheet modal-sheet--history" role="document">
-      <h2 id="historyPopupTitle">本局紀錄</h2>
+      <h2 id="historyPopupTitle">局內紀錄</h2>
       <div class="history-popup-body">
         <ul id="historyListPopup" class="history-list"></ul>
       </div>

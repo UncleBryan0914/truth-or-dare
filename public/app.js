@@ -63,7 +63,6 @@ const els = {
   history: $('#historyList'),
   historyPopup: $('#historyListPopup'),
   historyBar: $('#historyBar'),
-  historyBarLabel: $('#historyBarLabel'),
   historyOverlay: $('#historyOverlay'),
   historyClose: $('#historyClose'),
   appFrame: $('#appFrame'),
@@ -157,7 +156,6 @@ function measureFixedChromeHeight() {
   if (header) height += header.getBoundingClientRect().height;
   if (toolbar) height += toolbar.getBoundingClientRect().height;
   if (els.error?.classList.contains('visible')) height += els.error.getBoundingClientRect().height;
-  if (isMobileLayout() && els.historyBar) height += els.historyBar.getBoundingClientRect().height;
   return height;
 }
 
@@ -182,12 +180,7 @@ function tightenMobileArena(viewportH) {
   let cardW = getCurrentCardWidth();
   const deckWrapExtra = getDeckWrapExtra();
 
-  const measureGap = () => {
-    if (els.historyBar) {
-      return els.historyBar.getBoundingClientRect().top - arena.getBoundingClientRect().bottom;
-    }
-    return viewportH - arena.getBoundingClientRect().bottom;
-  };
+  const measureGap = () => viewportH - arena.getBoundingClientRect().bottom;
 
   let gap = measureGap();
   let guard = 0;
@@ -220,13 +213,13 @@ function fitMobileArena() {
   const arenaStyles = arena ? getComputedStyle(arena) : null;
   const arenaGap = arenaStyles ? parseFloat(arenaStyles.rowGap || arenaStyles.gap || '8') : 8;
   const arenaPad =
-    (arenaStyles ? parseFloat(arenaStyles.paddingTop) + parseFloat(arenaStyles.paddingBottom) : 10) + 2;
+    (arenaStyles ? parseFloat(arenaStyles.paddingTop) + parseFloat(arenaStyles.paddingBottom) : 14) + 4;
 
   const pile = document.querySelector('.pile');
   const pileStyles = pile ? getComputedStyle(pile) : null;
-  const pilePad = pileStyles ? parseFloat(pileStyles.paddingTop) + parseFloat(pileStyles.paddingBottom) : 12;
-  const pileRemaining = 18;
-  const deckMargin = 3;
+  const pilePad = pileStyles ? parseFloat(pileStyles.paddingTop) + parseFloat(pileStyles.paddingBottom) : 17.6;
+  const pileRemaining = 22;
+  const deckMargin = 4;
   const deckWrapExtra = getDeckWrapExtra();
   const perPileFixed = pilePad + deckWrapExtra + deckMargin + pileRemaining;
   const available = viewportH - chromeH - arenaGap - arenaPad - 2 * perPileFixed;
@@ -414,11 +407,6 @@ function buildHistoryHtml(session) {
     : '<li style="color:var(--muted)">尚無紀錄</li>';
 }
 
-function updateHistoryBarLabel(count) {
-  if (!els.historyBarLabel) return;
-  els.historyBarLabel.textContent = count > 0 ? `本局紀錄（${count} 筆）` : '本局紀錄';
-}
-
 function updateUI(session) {
   els.countTruth.textContent = String(session.remainingTruthIds.length);
   els.countDare.textContent = String(session.remainingDareIds.length);
@@ -442,7 +430,6 @@ function updateUI(session) {
   const historyHtml = buildHistoryHtml(session);
   if (els.history) els.history.innerHTML = historyHtml;
   if (els.historyPopup) els.historyPopup.innerHTML = historyHtml;
-  updateHistoryBarLabel(session.history.length);
 
   scheduleMobileFit();
 }
