@@ -61,6 +61,12 @@ const els = {
   revealOverlay: $('#revealOverlay'),
   result: $('#resultPanel'),
   history: $('#historyList'),
+  historyPopup: $('#historyListPopup'),
+  historyBar: $('#historyBar'),
+  historyBarLabel: $('#historyBarLabel'),
+  historyOverlay: $('#historyOverlay'),
+  historyClose: $('#historyClose'),
+  appFrame: $('#appFrame'),
   crossDeckModeBtns: document.querySelectorAll('.cross-deck-mode__btn'),
   playModeHelp: $('#btnPlayModeHelp'),
   playModeTooltip: $('#playModeTooltip'),
@@ -68,8 +74,7 @@ const els = {
 
 const MOBILE_MAX_WIDTH = 640;
 const CARD_ASPECT = 1.45;
-const CARD_WRAP_EXTRA = 24;
-const MIN_MOBILE_CARD_W = 72;
+const MIN_MOBILE_CARD_W = 64;
 const MAX_MOBILE_CARD_W = 160;
 
 let mobileFitRaf = 0;
@@ -140,6 +145,11 @@ function isMobileLayout() {
   return window.matchMedia(`(max-width: ${MOBILE_MAX_WIDTH}px)`).matches;
 }
 
+function getDeckWrapExtra() {
+  const raw = getComputedStyle(document.documentElement).getPropertyValue('--deck-wrap-extra');
+  return parseFloat(raw) || 24;
+}
+
 function measureFixedChromeHeight() {
   let height = 0;
   const header = document.querySelector('header');
@@ -147,7 +157,14 @@ function measureFixedChromeHeight() {
   if (header) height += header.getBoundingClientRect().height;
   if (toolbar) height += toolbar.getBoundingClientRect().height;
   if (els.error?.classList.contains('visible')) height += els.error.getBoundingClientRect().height;
+  if (isMobileLayout() && els.historyBar) height += els.historyBar.getBoundingClientRect().height;
   return height;
+}
+
+function getCurrentCardWidth() {
+  const raw = getComputedStyle(document.documentElement).getPropertyValue('--card-w');
+  const parsed = parseFloat(raw);
+  return Number.isFinite(parsed) ? parsed : MIN_MOBILE_CARD_W;
 }
 
 function applyMobileCardWidth(cardW) {
@@ -156,6 +173,39 @@ function applyMobileCardWidth(cardW) {
 
 function resetMobileCardWidth() {
   document.documentElement.style.removeProperty('--card-w');
+}
+
+function tightenMobileArena(viewportH) {
+  const arena = document.querySelector('.arena');
+  if (!isMobileLayout() || !arena) return;
+
+  let cardW = getCurrentCardWidth();
+  const deckWrapExtra = getDeckWrapExtra();
+
+  const measureGap = () => {
+    if (els.historyBar) {
+      return els.historyBar.getBoundingClientRect().top - arena.getBoundingClientRect().bottom;
+    }
+    return viewportH - arena.getBoundingClientRect().bottom;
+  };
+
+  let gap = measureGap();
+  let guard = 0;
+  while (gap < -1 && cardW > MIN_MOBILE_CARD_W && guard < 24) {
+    cardW = Math.max(MIN_MOBILE_CARD_W, cardW - Math.max(1, Math.ceil(Math.abs(gap) / (2 * CARD_ASPECT))));
+    applyMobileCardWidth(cardW);
+    gap = measureGap();
+    guard += 1;
+  }
+
+  if (document.documentElement.scrollHeight > viewportH + 1 && cardW > MIN_MOBILE_CARD_W) {
+    const overflow = document.documentElement.scrollHeight - viewportH;
+    cardW = Math.max(
+      MIN_MOBILE_CARD_W,
+      cardW - Math.ceil(overflow / (2 * CARD_ASPECT)) - 1
+    );
+    applyMobileCardWidth(cardW);
+  }
 }
 
 function fitMobileArena() {
@@ -170,32 +220,24 @@ function fitMobileArena() {
   const arenaStyles = arena ? getComputedStyle(arena) : null;
   const arenaGap = arenaStyles ? parseFloat(arenaStyles.rowGap || arenaStyles.gap || '8') : 8;
   const arenaPad =
-    (arenaStyles ? parseFloat(arenaStyles.paddingTop) + parseFloat(arenaStyles.paddingBottom) : 14) + 4;
+    (arenaStyles ? parseFloat(arenaStyles.paddingTop) + parseFloat(arenaStyles.paddingBottom) : 10) + 2;
 
   const pile = document.querySelector('.pile');
   const pileStyles = pile ? getComputedStyle(pile) : null;
-  const pilePad = pileStyles ? parseFloat(pileStyles.paddingTop) + parseFloat(pileStyles.paddingBottom) : 17.6;
-  const pileRemaining = 24;
-  const deckMargin = 4;
-  const perPileFixed = pilePad + CARD_WRAP_EXTRA + deckMargin + pileRemaining;
+  const pilePad = pileStyles ? parseFloat(pileStyles.paddingTop) + parseFloat(pileStyles.paddingBottom) : 12;
+  const pileRemaining = 18;
+  const deckMargin = 3;
+  const deckWrapExtra = getDeckWrapExtra();
+  const perPileFixed = pilePad + deckWrapExtra + deckMargin + pileRemaining;
   const available = viewportH - chromeH - arenaGap - arenaPad - 2 * perPileFixed;
 
   let cardW = available / (2 * CARD_ASPECT);
   cardW = Math.max(MIN_MOBILE_CARD_W, Math.min(MAX_MOBILE_CARD_W, cardW));
   applyMobileCardWidth(cardW);
 
-  const tighten = () => {
-    if (!isMobileLayout() || !arena) return;
-    const overflow = arena.getBoundingClientRect().bottom - viewportH + 6;
-    if (overflow > 0 && cardW > MIN_MOBILE_CARD_W) {
-      cardW = Math.max(MIN_MOBILE_CARD_W, cardW - Math.ceil(overflow / (2 * CARD_ASPECT)) - 1);
-      applyMobileCardWidth(cardW);
-    }
-  };
-
   requestAnimationFrame(() => {
-    tighten();
-    requestAnimationFrame(tighten);
+    tightenMobileArena(viewportH);
+    requestAnimationFrame(() => tightenMobileArena(viewportH));
   });
 }
 
@@ -236,6 +278,36 @@ function setPlayModeTooltipOpen(open) {
 
   if (open) positionPlayModeTooltip();
   else tooltip.style.removeProperty('transform');
+}
+
+function openHistoryOverlay() {
+  if (!els.historyOverlay) return;
+  els.historyOverlay.classList.remove('hidden');
+  els.historyOverlay.hidden = false;
+  els.historyOverlay.setAttribute('aria-hidden', 'false');
+  requestAnimationFrame(() => els.historyOverlay.classList.add('is-open'));
+}
+
+function closeHistoryOverlay() {
+  if (!els.historyOverlay) return;
+  els.historyOverlay.classList.remove('is-open');
+  els.historyOverlay.setAttribute('aria-hidden', 'true');
+  window.setTimeout(() => {
+    if (els.historyOverlay.classList.contains('is-open')) return;
+    els.historyOverlay.classList.add('hidden');
+    els.historyOverlay.hidden = true;
+  }, 180);
+}
+
+function bindHistoryBar() {
+  els.historyBar?.addEventListener('click', openHistoryOverlay);
+  els.historyClose?.addEventListener('click', closeHistoryOverlay);
+  els.historyOverlay?.addEventListener('click', (e) => {
+    if (e.target === els.historyOverlay) closeHistoryOverlay();
+  });
+  els.historyOverlay?.querySelector('.modal-sheet')?.addEventListener('click', (e) => {
+    e.stopPropagation();
+  });
 }
 
 function bindPlayModeHelp() {
@@ -328,6 +400,25 @@ function findCard(type, id) {
   return list.find((c) => c.id === id);
 }
 
+function buildHistoryHtml(session) {
+  return session.history.length
+    ? session.history
+        .slice()
+        .reverse()
+        .map((h) => {
+          const deckLabel = h.type === 'truth' ? '真心話' : '大冒險';
+          const crossNote = h.crossDeck ? ' <em style="color:#fbbf24;font-style:normal">（隔壁棚）</em>' : '';
+          return `<li>[${deckLabel}]${crossNote} <span>${escapeHtml(h.text)}</span></li>`;
+        })
+        .join('')
+    : '<li style="color:var(--muted)">尚無紀錄</li>';
+}
+
+function updateHistoryBarLabel(count) {
+  if (!els.historyBarLabel) return;
+  els.historyBarLabel.textContent = count > 0 ? `本局紀錄（${count} 筆）` : '本局紀錄';
+}
+
 function updateUI(session) {
   els.countTruth.textContent = String(session.remainingTruthIds.length);
   els.countDare.textContent = String(session.remainingDareIds.length);
@@ -348,19 +439,12 @@ function updateUI(session) {
     el.classList.toggle('disabled', false);
   });
 
-  scheduleMobileFit();
+  const historyHtml = buildHistoryHtml(session);
+  if (els.history) els.history.innerHTML = historyHtml;
+  if (els.historyPopup) els.historyPopup.innerHTML = historyHtml;
+  updateHistoryBarLabel(session.history.length);
 
-  els.history.innerHTML = session.history.length
-    ? session.history
-        .slice()
-        .reverse()
-        .map((h) => {
-          const deckLabel = h.type === 'truth' ? '真心話' : '大冒險';
-          const crossNote = h.crossDeck ? ' <em style="color:#fbbf24;font-style:normal">（隔壁棚）</em>' : '';
-          return `<li>[${deckLabel}]${crossNote} <span>${escapeHtml(h.text)}</span></li>`;
-        })
-        .join('')
-    : '<li style="color:var(--muted)">尚無紀錄</li>';
+  scheduleMobileFit();
 }
 
 function escapeHtml(s) {
@@ -535,6 +619,7 @@ async function fetchFromCustomApi(cfg) {
 function bindEvents() {
   window.TempCards?.init?.();
   bindPlayModeHelp();
+  bindHistoryBar();
 
   if (els.revealOverlay) {
     els.revealOverlay.addEventListener('click', hideReveal);
@@ -546,6 +631,7 @@ function bindEvents() {
     saveSession(session);
     hideReveal();
     hideError();
+    closeHistoryOverlay();
     updateUI(session);
   });
 
