@@ -74,6 +74,8 @@ const els = {
 const MOBILE_MAX_WIDTH = 640;
 const CARD_ASPECT = 1.45;
 const MOBILE_PILE_SCALE = 0.9;
+const MOBILE_SECTION_GAP_COUNT = 6;
+const MIN_MOBILE_SECTION_GAP = 4;
 const MIN_MOBILE_CARD_W = 58;
 const MAX_MOBILE_CARD_W = 144;
 
@@ -150,14 +152,42 @@ function getDeckWrapExtra() {
   return parseFloat(raw) || 24;
 }
 
-function measureFixedChromeHeight() {
+function setMobileSectionGap(gapPx) {
+  document.documentElement.style.setProperty(
+    '--mobile-section-gap',
+    `${Math.max(0, Math.floor(gapPx))}px`
+  );
+}
+
+function clearMobileSectionGap() {
+  document.documentElement.style.removeProperty('--mobile-section-gap');
+}
+
+function measureMobileNonCardHeight() {
   let height = 0;
   const header = document.querySelector('header');
-  const toolbar = document.querySelector('.toolbar');
+  const primary = document.querySelector('.toolbar__primary');
+  const playMode = document.querySelector('.cross-deck-mode');
   if (header) height += header.getBoundingClientRect().height;
-  if (toolbar) height += toolbar.getBoundingClientRect().height;
+  if (primary) height += primary.getBoundingClientRect().height;
+  if (playMode) height += playMode.getBoundingClientRect().height;
   if (els.error?.classList.contains('visible')) height += els.error.getBoundingClientRect().height;
   return height;
+}
+
+function measureMobilePileChromeHeight() {
+  const pile = document.querySelector('.pile');
+  if (!pile) return 40;
+  const styles = getComputedStyle(pile);
+  const pad = parseFloat(styles.paddingTop) + parseFloat(styles.paddingBottom);
+  const remaining = document.querySelector('.pile-remaining')?.getBoundingClientRect().height ?? 18;
+  const deckMargin =
+    parseFloat(getComputedStyle(document.querySelector('.deck-wrap') || pile).marginBottom) || 4;
+  return pad + getDeckWrapExtra() + deckMargin + remaining;
+}
+
+function getMobileGapCount() {
+  return els.error?.classList.contains('visible') ? MOBILE_SECTION_GAP_COUNT + 1 : MOBILE_SECTION_GAP_COUNT;
 }
 
 function getCurrentCardWidth() {
@@ -174,21 +204,46 @@ function resetMobileCardWidth() {
   document.documentElement.style.removeProperty('--card-w');
 }
 
-function tightenMobileArena(viewportH) {
-  const arena = document.querySelector('.arena');
-  if (!isMobileLayout() || !arena) return;
+function finalizeMobileEqualSpacing(viewportH) {
+  const dare = document.querySelector('.pile.dare');
+  const header = document.querySelector('header');
+  if (!dare || !header) return;
 
   let cardW = getCurrentCardWidth();
-  const deckWrapExtra = getDeckWrapExtra();
+  let gapCount = getMobileGapCount();
+  let sectionGap = parseFloat(
+    getComputedStyle(document.documentElement).getPropertyValue('--mobile-section-gap')
+  ) || MIN_MOBILE_SECTION_GAP;
 
-  const measureGap = () => viewportH - arena.getBoundingClientRect().bottom;
+  const tune = () => {
+    const topGap = header.getBoundingClientRect().top;
+    const bottomGap = viewportH - dare.getBoundingClientRect().bottom;
+    return { topGap, bottomGap };
+  };
 
-  let gap = measureGap();
   let guard = 0;
-  while (gap < -1 && cardW > MIN_MOBILE_CARD_W && guard < 24) {
-    cardW = Math.max(MIN_MOBILE_CARD_W, cardW - Math.max(1, Math.ceil(Math.abs(gap) / (2 * CARD_ASPECT))));
-    applyMobileCardWidth(cardW);
-    gap = measureGap();
+  while (guard < 24) {
+    let { topGap, bottomGap } = tune();
+
+    if (topGap < bottomGap - 1 && cardW > MIN_MOBILE_CARD_W) {
+      cardW = Math.max(MIN_MOBILE_CARD_W, cardW - 2);
+      applyMobileCardWidth(cardW);
+      guard += 1;
+      continue;
+    }
+
+    if (topGap > bottomGap + 1 && cardW < MAX_MOBILE_CARD_W) {
+      cardW = Math.min(MAX_MOBILE_CARD_W, cardW + 2);
+      applyMobileCardWidth(cardW);
+      guard += 1;
+      continue;
+    }
+
+    const slack = (topGap + bottomGap) / 2;
+    if (Math.abs(topGap - bottomGap) <= 1 && Math.abs(slack - sectionGap) <= 1) break;
+
+    sectionGap = Math.max(MIN_MOBILE_SECTION_GAP, (topGap + bottomGap) / 2);
+    setMobileSectionGap(sectionGap);
     guard += 1;
   }
 
@@ -199,39 +254,62 @@ function tightenMobileArena(viewportH) {
       cardW - Math.ceil(overflow / (2 * CARD_ASPECT)) - 1
     );
     applyMobileCardWidth(cardW);
+    const contentH = measureMobileNonCardHeight() + 2 * (measureMobilePileChromeHeight() + cardW * CARD_ASPECT);
+    sectionGap = Math.max(MIN_MOBILE_SECTION_GAP, (viewportH - contentH) / gapCount);
+    setMobileSectionGap(sectionGap);
   }
 }
 
 function fitMobileArena() {
   if (!isMobileLayout()) {
     resetMobileCardWidth();
+    clearMobileSectionGap();
     return;
   }
 
   const viewportH = window.visualViewport?.height ?? window.innerHeight;
-  const chromeH = measureFixedChromeHeight();
-  const arena = document.querySelector('.arena');
-  const arenaStyles = arena ? getComputedStyle(arena) : null;
-  const arenaGap = arenaStyles ? parseFloat(arenaStyles.rowGap || arenaStyles.gap || '8') : 8;
-  const arenaPad =
-    (arenaStyles ? parseFloat(arenaStyles.paddingTop) + parseFloat(arenaStyles.paddingBottom) : 14) + 4;
+  const gapCount = getMobileGapCount();
+  const pileChrome = measureMobilePileChromeHeight();
 
-  const pile = document.querySelector('.pile');
-  const pileStyles = pile ? getComputedStyle(pile) : null;
-  const pilePad = pileStyles ? parseFloat(pileStyles.paddingTop) + parseFloat(pileStyles.paddingBottom) : 17.6;
-  const pileRemaining = 22;
-  const deckMargin = 4;
-  const deckWrapExtra = getDeckWrapExtra();
-  const perPileFixed = pilePad + deckWrapExtra + deckMargin + pileRemaining;
-  const available = viewportH - chromeH - arenaGap - arenaPad - 2 * perPileFixed;
+  let sectionGap = 8;
+  let cardW = MAX_MOBILE_CARD_W;
 
-  let cardW = (available / (2 * CARD_ASPECT)) * MOBILE_PILE_SCALE;
-  cardW = Math.max(MIN_MOBILE_CARD_W, Math.min(MAX_MOBILE_CARD_W, cardW));
+  for (let i = 0; i < 20; i += 1) {
+    setMobileSectionGap(sectionGap);
+    applyMobileCardWidth(cardW);
+
+    const nonCardH = measureMobileNonCardHeight();
+    const cardArea = 2 * (pileChrome + cardW * CARD_ASPECT);
+    const nextGap = (viewportH - nonCardH - cardArea) / gapCount;
+
+    if (nextGap < MIN_MOBILE_SECTION_GAP && cardW > MIN_MOBILE_CARD_W) {
+      cardW = Math.max(MIN_MOBILE_CARD_W, cardW - 2);
+      continue;
+    }
+
+    sectionGap = Math.max(MIN_MOBILE_SECTION_GAP, nextGap);
+
+    const availableCards =
+      viewportH - gapCount * sectionGap - nonCardH - 2 * pileChrome;
+    const nextCardW = Math.max(
+      MIN_MOBILE_CARD_W,
+      Math.min(MAX_MOBILE_CARD_W, (availableCards / (2 * CARD_ASPECT)) * MOBILE_PILE_SCALE)
+    );
+
+    if (Math.abs(nextCardW - cardW) < 0.5 && Math.abs(nextGap - sectionGap) < 0.5) {
+      cardW = nextCardW;
+      break;
+    }
+
+    cardW = nextCardW;
+  }
+
+  setMobileSectionGap(sectionGap);
   applyMobileCardWidth(cardW);
 
   requestAnimationFrame(() => {
-    tightenMobileArena(viewportH);
-    requestAnimationFrame(() => tightenMobileArena(viewportH));
+    finalizeMobileEqualSpacing(viewportH);
+    requestAnimationFrame(() => finalizeMobileEqualSpacing(viewportH));
   });
 }
 

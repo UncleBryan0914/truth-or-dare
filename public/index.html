@@ -423,31 +423,27 @@
         min-height: 0;
         display: flex;
         flex-direction: column;
+        gap: var(--mobile-section-gap, 8px);
         overflow: hidden;
         width: 100%;
         max-width: 100%;
-        padding: 0 1rem;
+        padding: var(--mobile-section-gap, 8px) 1rem;
         box-sizing: border-box;
       }
 
       header {
-        padding: 0.65rem 0 0.25rem;
+        padding: 0;
+        margin: 0;
         flex-shrink: 0;
       }
 
       header h1 {
         font-size: 1.2rem;
+        line-height: 1.2;
       }
 
       .toolbar {
-        flex-direction: column;
-        align-items: stretch;
-        gap: 0.5rem;
-        padding: 0.45rem 0 0.5rem;
-        flex-shrink: 0;
-        width: 100%;
-        max-width: none;
-        margin: 0;
+        display: contents;
       }
 
       .toolbar__primary {
@@ -508,35 +504,33 @@
 
       .error-banner {
         flex-shrink: 0;
-        margin: 0 0 0.35rem;
+        margin: 0;
         max-width: none;
+      }
+
+      .error-banner:not(.visible) {
+        display: none;
       }
 
       :root {
         --mobile-pile-scale: 0.9;
         --deck-wrap-extra: 21.6px;
-      }
-
-      .toolbar {
-        padding-bottom: 0.35rem;
+        --mobile-section-gap: 8px;
       }
 
       .arena {
-        flex: 1;
-        min-height: 0;
-        grid-template-columns: 1fr;
-        gap: calc(0.5rem * var(--mobile-pile-scale));
-        padding: calc(0.35rem * var(--mobile-pile-scale)) 0 calc(0.5rem * var(--mobile-pile-scale));
-        overflow: hidden;
+        display: contents;
+      }
+
+      .toolbar__primary,
+      .cross-deck-mode,
+      .pile {
         width: 100%;
-        max-width: none;
-        margin: -10px 0 0;
-        align-content: start;
+        flex-shrink: 0;
       }
 
       .pile {
         padding: calc(0.55rem * var(--mobile-pile-scale));
-        width: 100%;
         border-radius: calc(1rem * var(--mobile-pile-scale));
       }
 
