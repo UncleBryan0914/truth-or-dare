@@ -77,6 +77,11 @@ const TITLE_GAP_RATIO = 1.5;
 const MIN_GAP_N = 6;
 const MAX_GAP_N = 16;
 const PLAY_MODE_GROUP_SCALE = 1.6;
+const DESKTOP_UI_FONT_SCALE = 1.8;
+const DESKTOP_PRIMARY_BTN_SCALE = 1.2;
+const DESKTOP_MODE_ROW_HEIGHT_SCALE = 1.5;
+const DESKTOP_PLAY_MODE_GROUP_SCALE = 1.6;
+const DESKTOP_BASE_UI_FONT_REM = 0.72;
 const DEFAULT_UI_FONT_REM = 0.72;
 const MIN_UI_FONT_REM = 0.62;
 const MIN_CARD_W = 48;
@@ -182,6 +187,85 @@ function clearMobileTokens() {
   );
 }
 
+function clearDesktopTokens() {
+  [
+    '--desktop-ui-font',
+    '--desktop-mode-row-h',
+    '--desktop-btn-new-w',
+    '--desktop-btn-manage-w',
+    '--desktop-play-mode-group-w',
+  ].forEach((prop) => {
+    document.documentElement.style.removeProperty(prop);
+  });
+}
+
+function measureElementBaseWidth(el) {
+  const probe = el.cloneNode(true);
+  probe.style.cssText =
+    'position:fixed;left:-9999px;top:0;visibility:hidden;pointer-events:none;width:max-content;max-width:none;';
+  probe.style.removeProperty('width');
+  document.body.appendChild(probe);
+  const width = probe.getBoundingClientRect().width;
+  probe.remove();
+  return width;
+}
+
+function applyDesktopPlayModeGroupWidth() {
+  const row = document.querySelector('.cross-deck-mode');
+  const group = document.querySelector('.cross-deck-mode__group');
+  const label = document.querySelector('.cross-deck-mode__label');
+  const help = document.querySelector('.cross-deck-mode__help');
+  if (!row || !group) return null;
+
+  document.documentElement.style.removeProperty('--desktop-play-mode-group-w');
+  const baseWidth = measurePlayModeGroupBaseWidth(group);
+  let targetWidth = Math.ceil(baseWidth * DESKTOP_PLAY_MODE_GROUP_SCALE);
+
+  const rowStyles = getComputedStyle(row);
+  const rowPadding =
+    parseFloat(rowStyles.paddingLeft) + parseFloat(rowStyles.paddingRight);
+  const actionGap = parseFloat(rowStyles.columnGap || rowStyles.gap) || 0;
+  const sideWidth = (label?.offsetWidth || 0) + (help?.offsetWidth || 0) + actionGap * 2;
+  const maxGroupWidth = Math.max(0, row.clientWidth - rowPadding - sideWidth);
+  targetWidth = Math.min(targetWidth, maxGroupWidth);
+
+  document.documentElement.style.setProperty('--desktop-play-mode-group-w', `${targetWidth}px`);
+  return { baseWidth, targetWidth, scale: DESKTOP_PLAY_MODE_GROUP_SCALE };
+}
+
+function applyDesktopToolbarLayout() {
+  const root = document.documentElement;
+  root.style.setProperty(
+    '--desktop-ui-font',
+    `${DESKTOP_BASE_UI_FONT_REM * DESKTOP_UI_FONT_SCALE}rem`
+  );
+  root.style.setProperty(
+    '--desktop-mode-row-h',
+    `calc(var(--toolbar-control-h) * ${DESKTOP_MODE_ROW_HEIGHT_SCALE})`
+  );
+
+  root.style.removeProperty('--desktop-btn-new-w');
+  root.style.removeProperty('--desktop-btn-manage-w');
+
+  if (els.btnNew) {
+    const baseW = measureElementBaseWidth(els.btnNew);
+    root.style.setProperty(
+      '--desktop-btn-new-w',
+      `${Math.ceil(baseW * DESKTOP_PRIMARY_BTN_SCALE)}px`
+    );
+  }
+
+  if (els.btnManageTemp) {
+    const baseW = measureElementBaseWidth(els.btnManageTemp);
+    root.style.setProperty(
+      '--desktop-btn-manage-w',
+      `${Math.ceil(baseW * DESKTOP_PRIMARY_BTN_SCALE)}px`
+    );
+  }
+
+  return applyDesktopPlayModeGroupWidth();
+}
+
 function measurePlayModeGroupBaseWidth(group) {
   const probe = group.cloneNode(true);
   probe.style.cssText =
@@ -265,8 +349,11 @@ function applyMobileCardWidth(cardW) {
 function fitMobileLayout() {
   if (!isMobileLayout()) {
     clearMobileTokens();
+    applyDesktopToolbarLayout();
     return;
   }
+
+  clearDesktopTokens();
 
   applyMobileCardWidth(MIN_CARD_W);
 
@@ -305,7 +392,10 @@ function fitMobileLayout() {
 }
 
 function refineMobileLayout() {
-  if (!isMobileLayout()) return;
+  if (!isMobileLayout()) {
+    applyDesktopToolbarLayout();
+    return;
+  }
 
   applyPlayModeGroupWidth();
   applyMobileCardWidth(computeCardWidthFromPiles());

@@ -391,7 +391,9 @@
     /* ── PC 版（≥641px）：第 2 列操作鈕、第 3 列遊玩模式，字級統一 ── */
     @media (min-width: 641px) {
       :root {
-        --desktop-ui-font: 0.72rem;
+        --desktop-ui-font: 1.296rem;
+        --desktop-action-btn-h: var(--toolbar-control-h);
+        --desktop-mode-row-h: calc(var(--toolbar-control-h) * 1.5);
         --desktop-action-gap: 0.4rem;
       }
 
@@ -423,7 +425,7 @@
       }
 
       .toolbar__primary button {
-        height: var(--toolbar-control-h);
+        height: var(--desktop-action-btn-h);
         padding: 0 1.1rem;
         display: inline-flex;
         align-items: center;
@@ -431,10 +433,22 @@
         box-sizing: border-box;
       }
 
+      #btnNewGame {
+        width: var(--desktop-btn-new-w, auto);
+      }
+
+      #btnManageTemp {
+        width: var(--desktop-btn-manage-w, auto);
+      }
+
       .cross-deck-mode {
         width: auto;
         max-width: 100%;
+        height: var(--desktop-mode-row-h);
+        min-height: var(--desktop-mode-row-h);
+        box-sizing: border-box;
         justify-content: center;
+        align-items: center;
         gap: var(--desktop-action-gap);
         padding: 0 0.55rem;
       }
@@ -446,10 +460,18 @@
 
       .cross-deck-mode__group {
         flex: 0 0 auto;
-        height: calc(var(--toolbar-control-h) - 4px);
+        width: var(--desktop-play-mode-group-w, max-content);
+        height: var(--desktop-action-btn-h);
+        min-height: var(--desktop-action-btn-h);
+        display: flex;
+        border: none;
+        border-radius: 999px;
+        overflow: hidden;
       }
 
       .cross-deck-mode__btn {
+        flex: 1 1 0;
+        min-width: 0;
         height: 100%;
         padding: 0 0.5rem;
         display: inline-flex;
@@ -464,9 +486,9 @@
 
       .cross-deck-mode__help {
         flex: 0 0 auto;
-        width: var(--toolbar-control-h);
-        height: var(--toolbar-control-h);
-        min-width: var(--toolbar-control-h);
+        width: var(--desktop-action-btn-h);
+        height: var(--desktop-action-btn-h);
+        min-width: var(--desktop-action-btn-h);
         font-size: var(--desktop-ui-font);
         line-height: 1;
       }
