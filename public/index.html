@@ -391,7 +391,7 @@
     /* ── PC 版（≥641px）：第 2 列操作鈕、第 3 列遊玩模式，字級統一 ── */
     @media (min-width: 641px) {
       :root {
-        --desktop-ui-font: 1.296rem;
+        --desktop-ui-font: 1.0368rem;
         --desktop-action-btn-h: var(--toolbar-control-h);
         --desktop-mode-row-h: calc(var(--toolbar-control-h) * 1.5);
         --desktop-action-gap: 0.4rem;
@@ -442,7 +442,7 @@
       }
 
       .cross-deck-mode {
-        width: auto;
+        width: var(--desktop-mode-row-w, auto);
         max-width: 100%;
         height: var(--desktop-mode-row-h);
         min-height: var(--desktop-mode-row-h);
@@ -489,7 +489,7 @@
         width: var(--desktop-action-btn-h);
         height: var(--desktop-action-btn-h);
         min-width: var(--desktop-action-btn-h);
-        font-size: var(--desktop-ui-font);
+        font-size: calc(var(--desktop-ui-font) * 1.25);
         line-height: 1;
       }
     }

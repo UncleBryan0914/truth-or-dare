@@ -77,9 +77,10 @@ const TITLE_GAP_RATIO = 1.5;
 const MIN_GAP_N = 6;
 const MAX_GAP_N = 16;
 const PLAY_MODE_GROUP_SCALE = 1.6;
-const DESKTOP_UI_FONT_SCALE = 1.8;
+const DESKTOP_UI_FONT_SCALE = 1.44;
 const DESKTOP_PRIMARY_BTN_SCALE = 1.2;
 const DESKTOP_MODE_ROW_HEIGHT_SCALE = 1.5;
+const DESKTOP_MODE_ROW_WIDTH_SCALE = 1.2;
 const DESKTOP_PLAY_MODE_GROUP_SCALE = 1.6;
 const DESKTOP_BASE_UI_FONT_REM = 0.72;
 const DEFAULT_UI_FONT_REM = 0.72;
@@ -194,6 +195,7 @@ function clearDesktopTokens() {
     '--desktop-btn-new-w',
     '--desktop-btn-manage-w',
     '--desktop-play-mode-group-w',
+    '--desktop-mode-row-w',
   ].forEach((prop) => {
     document.documentElement.style.removeProperty(prop);
   });
@@ -233,6 +235,17 @@ function applyDesktopPlayModeGroupWidth() {
   return { baseWidth, targetWidth, scale: DESKTOP_PLAY_MODE_GROUP_SCALE };
 }
 
+function applyDesktopModeRowWidth() {
+  const row = document.querySelector('.cross-deck-mode');
+  if (!row) return null;
+
+  document.documentElement.style.removeProperty('--desktop-mode-row-w');
+  const baseWidth = row.getBoundingClientRect().width;
+  const targetWidth = Math.ceil(baseWidth * DESKTOP_MODE_ROW_WIDTH_SCALE);
+  document.documentElement.style.setProperty('--desktop-mode-row-w', `${targetWidth}px`);
+  return { baseWidth, targetWidth, scale: DESKTOP_MODE_ROW_WIDTH_SCALE };
+}
+
 function applyDesktopToolbarLayout() {
   const root = document.documentElement;
   root.style.setProperty(
@@ -263,7 +276,8 @@ function applyDesktopToolbarLayout() {
     );
   }
 
-  return applyDesktopPlayModeGroupWidth();
+  applyDesktopPlayModeGroupWidth();
+  return applyDesktopModeRowWidth();
 }
 
 function measurePlayModeGroupBaseWidth(group) {
