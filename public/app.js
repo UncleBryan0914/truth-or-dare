@@ -9,6 +9,16 @@ const STORAGE_KEY = 'truth_or_dare_session_v1';
 
 const TEMP_STORAGE_KEY = 'truth_or_dare_temp_cards_v1';
 
+const CROSS_DECK_MODE_KEY = 'truth_or_dare_cross_deck_mode_v1';
+
+/** @typedef {'peace'|'icebreaker'|'drunk'} CrossDeckMode */
+
+const CROSS_DECK_CHANCES = {
+  peace: 0,
+  icebreaker: 0.2,
+  drunk: 0.5,
+};
+
 const DEMO_DECK = {
   truth: [
     { id: 't1', text: '說出一個你從沒告訴過在場任何人的秘密。' },
@@ -51,6 +61,7 @@ const els = {
   revealOverlay: $('#revealOverlay'),
   result: $('#resultPanel'),
   history: $('#historyList'),
+  crossDeckModeBtns: document.querySelectorAll('.cross-deck-mode__btn'),
 };
 
 /** @type {DeckCatalog} */
@@ -205,10 +216,11 @@ function updateUI(session) {
     ? session.history
         .slice()
         .reverse()
-        .map(
-          (h) =>
-            `<li>[${h.type === 'truth' ? '真心話' : '大冒險'}] <span>${escapeHtml(h.text)}</span></li>`
-        )
+        .map((h) => {
+          const deckLabel = h.type === 'truth' ? '真心話' : '大冒險';
+          const crossNote = h.crossDeck ? ' <em style="color:#fbbf24;font-style:normal">（隔壁棚）</em>' : '';
+          return `<li>[${deckLabel}]${crossNote} <span>${escapeHtml(h.text)}</span></li>`;
+        })
         .join('')
     : '<li style="color:var(--muted)">尚無紀錄</li>';
 }
@@ -233,11 +245,40 @@ function hideReveal() {
   }, REVEAL_CLOSE_MS);
 }
 
-/** @param {'truth'|'dare'} type @param {Card} card */
-function showReveal(type, card) {
+/** @returns {CrossDeckMode} */
+function loadCrossDeckMode() {
+  const raw = localStorage.getItem(CROSS_DECK_MODE_KEY);
+  if (raw === 'icebreaker' || raw === 'drunk') return raw;
+  return 'peace';
+}
+
+/** @param {CrossDeckMode} mode */
+function saveCrossDeckMode(mode) {
+  localStorage.setItem(CROSS_DECK_MODE_KEY, mode);
+}
+
+function getCrossDeckChance() {
+  return CROSS_DECK_CHANCES[loadCrossDeckMode()] ?? 0;
+}
+
+function updateCrossDeckModeUI() {
+  const mode = loadCrossDeckMode();
+  els.crossDeckModeBtns.forEach((btn) => {
+    const active = btn.dataset.mode === mode;
+    btn.classList.toggle('is-active', active);
+    btn.setAttribute('aria-pressed', active ? 'true' : 'false');
+  });
+}
+
+/** @param {'truth'|'dare'} type @param {Card} card @param {{ crossDeck?: boolean }} [opts] */
+function showReveal(type, card, opts = {}) {
   const label = type === 'truth' ? '真心話' : '大冒險';
+  const crossDeckBanner = opts.crossDeck
+    ? '<p class="cross-deck-banner">恭喜你抽到隔壁棚！</p>'
+    : '';
   els.result.innerHTML = `
     <article class="card-reveal ${type}">
+      ${crossDeckBanner}
       <div class="tag">${label}</div>
       <p id="revealTitle">${escapeHtml(card.text)}</p>
     </article>
@@ -256,26 +297,46 @@ function showReveal(type, card) {
 /** @param {'truth'|'dare'} type */
 function drawCard(type) {
   const session = getOrInitSession();
-  const poolKey = type === 'truth' ? 'remainingTruthIds' : 'remainingDareIds';
-  const pool = session[poolKey];
+  const requestedPoolKey = type === 'truth' ? 'remainingTruthIds' : 'remainingDareIds';
 
-  if (pool.length === 0) {
+  if (session[requestedPoolKey].length === 0) {
     showReveal(type, { id: '', text: '此牌堆已抽完！請開啟新局或到後台新增卡牌。' });
     return;
   }
 
+  let actualType = type;
+  let isCrossDeck = false;
+  const crossChance = getCrossDeckChance();
+
+  if (crossChance > 0 && Math.random() < crossChance) {
+    const otherType = type === 'truth' ? 'dare' : 'truth';
+    const otherPoolKey = otherType === 'truth' ? 'remainingTruthIds' : 'remainingDareIds';
+    if (session[otherPoolKey].length > 0) {
+      actualType = otherType;
+      isCrossDeck = true;
+    }
+  }
+
+  const poolKey = actualType === 'truth' ? 'remainingTruthIds' : 'remainingDareIds';
+  const pool = session[poolKey];
   const index = Math.floor(Math.random() * pool.length);
   const [cardId] = pool.splice(index, 1);
-  const card = findCard(type, cardId);
+  const card = findCard(actualType, cardId);
 
   if (!card) {
     showError('卡牌資料不一致，請開啟新局。');
     return;
   }
 
-  session.history.push({ type, id: card.id, text: card.text, at: Date.now() });
+  session.history.push({
+    type: actualType,
+    id: card.id,
+    text: card.text,
+    at: Date.now(),
+    crossDeck: isCrossDeck,
+  });
   saveSession(session);
-  showReveal(type, card);
+  showReveal(actualType, card, { crossDeck: isCrossDeck });
   updateUI(session);
 }
 
@@ -360,10 +421,20 @@ function bindEvents() {
     const deck = e.target.closest('.deck.face');
     if (deck) drawCard('dare');
   });
+
+  els.crossDeckModeBtns.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const mode = btn.dataset.mode;
+      if (mode !== 'peace' && mode !== 'icebreaker' && mode !== 'drunk') return;
+      saveCrossDeckMode(mode);
+      updateCrossDeckModeUI();
+    });
+  });
 }
 
 async function init() {
   bindEvents();
+  updateCrossDeckModeUI();
   setLoading(true);
   hideError();
 
